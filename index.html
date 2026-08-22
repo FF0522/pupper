@@ -50,26 +50,61 @@
     box-shadow: 0 4px 20px rgba(0,0,0,0.4);
   }
 
-  /* Header Bar */
-  #titleBar { top: 14px; left: 14px; display: flex; align-items: center; gap: 12px; }
-  #titleBar h1 { font-size: 15px; font-weight: 700; margin: 0; letter-spacing: 0.5px; }
-  #titleBar .sub { font-size: 10px; color: var(--dim); font-family: monospace; }
+  /* Top-Left Combined Map & Title Container */
+  #mapContainer {
+    top: 14px;
+    left: 14px;
+    width: 210px;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+  }
+  #mapHeader {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+  }
+  #mapHeader h1 {
+    font-size: 13px;
+    font-weight: 700;
+    margin: 0;
+    letter-spacing: 0.5px;
+    color: var(--text);
+  }
   #stateBadge {
     font-family: monospace;
-    font-size: 11px;
+    font-size: 10px;
     font-weight: 700;
-    padding: 4px 10px;
+    padding: 2px 6px;
     border-radius: 4px;
     border: 1px solid var(--line);
     letter-spacing: 0.5px;
     transition: all 0.25s ease;
   }
+  #minimapCanvas {
+    width: 100%;
+    height: 180px;
+    background: #0d1520;
+    border: 1px solid #233448;
+    border-radius: 6px;
+    display: block;
+  }
+  .map-legend {
+    display: flex;
+    justify-content: space-around;
+    font-size: 10px;
+    color: var(--dim);
+    font-family: monospace;
+    padding-top: 2px;
+  }
+  .map-legend span { display: flex; align-items: center; gap: 4px; }
+  .dot-legend { width: 6px; height: 6px; border-radius: 50%; display: inline-block; }
 
   /* Store Selector Panel */
   #storePanel {
     top: 14px; left: 50%; transform: translateX(-50%);
     display: flex; gap: 6px; flex-wrap: wrap; justify-content: center;
-    max-width: 90vw;
+    max-width: 80vw;
   }
   .store-btn {
     font-size: 12px;
@@ -89,26 +124,26 @@
   .store-btn.active { background: #0f3d36; border-color: var(--teal); color: var(--teal); box-shadow: 0 0 8px rgba(52,208,182,0.4); }
 
   /* Sensor HUD */
-  #sensorPanel { bottom: 14px; left: 14px; width: 220px; font-size: 12px; font-family: monospace; }
+  #sensorPanel { top: 285px; left: 14px; width: 210px; font-size: 11px; font-family: monospace; }
   #sensorPanel .row { display: flex; justify-content: space-between; padding: 3px 0; color: var(--dim); }
   #sensorPanel .row span.v { color: var(--text); font-weight: 600; }
-  #sensorPanel .dot { display: inline-block; width: 7px; height: 7px; border-radius: 50%; margin-right: 6px; }
+  #sensorPanel .dot { display: inline-block; width: 6px; height: 6px; border-radius: 50%; margin-right: 5px; }
 
   /* Telemetry Panel */
-  #telemetryPanel { top: 70px; right: 14px; width: 240px; font-size: 11px; font-family: monospace; }
+  #telemetryPanel { top: 70px; right: 14px; width: 230px; font-size: 11px; font-family: monospace; }
   #telemetryPanel h3 { font-size: 11px; text-transform: uppercase; letter-spacing: 0.6px; color: var(--teal); margin: 0 0 8px; font-weight: 700; display: flex; justify-content: space-between; }
   #telemetryPanel .metric { display: flex; justify-content: space-between; padding: 3px 0; border-bottom: 1px solid #1a2736; }
   #telemetryPanel .metric-val { font-weight: bold; color: #ffffff; }
 
   /* Haptic & Event Panel */
-  #hapticPanel { top: 260px; right: 14px; width: 240px; }
+  #hapticPanel { top: 260px; right: 14px; width: 230px; }
   #hapticPanel h3 { font-size: 11px; text-transform: uppercase; letter-spacing: 0.6px; color: var(--dim); margin: 0 0 8px; font-weight: 600; }
   #pullArrowWrap { display: flex; align-items: center; gap: 8px; margin-bottom: 6px; }
   #pullArrow { width: 22px; height: 22px; transition: transform 0.3s ease; }
   #pullLabel { font-size: 11px; color: var(--dim); }
   #vibeBarBg { width: 100%; height: 5px; background: #1c2836; border-radius: 3px; overflow: hidden; margin-bottom: 8px; }
   #vibeBarFill { height: 100%; width: 0%; background: var(--teal); transition: width 0.25s ease, background 0.25s ease; }
-  #btLog { font-size: 11px; font-family: monospace; color: var(--dim); max-height: 85px; overflow-y: auto; border-top: 1px solid var(--line); padding-top: 6px; }
+  #btLog { font-size: 10px; font-family: monospace; color: var(--dim); max-height: 85px; overflow-y: auto; border-top: 1px solid var(--line); padding-top: 6px; }
   #btLog div { padding: 2px 0; }
 
   /* Bottom Controls */
@@ -131,7 +166,7 @@
     background: rgba(15, 23, 34, 0.95);
     border: 2px solid var(--teal);
     border-radius: 12px;
-    padding: 20px 28px;
+    padding: 22px 30px;
     text-align: center;
     z-index: 100;
     box-shadow: 0 10px 30px rgba(52,208,182,0.3);
@@ -139,20 +174,26 @@
   }
   @keyframes popIn { 0% { transform: translate(-50%, -40%) scale(0.8); opacity: 0; } 100% { transform: translate(-50%, -50%) scale(1); opacity: 1; } }
   #arrivalCard h2 { margin: 0 0 8px; color: var(--teal); font-size: 20px; }
-  #arrivalCard p { margin: 0 0 16px; font-size: 14px; color: var(--dim); }
-  #arrivalCard button { background: var(--teal); color: #000; font-weight: bold; padding: 8px 20px; border: none; }
+  #arrivalCard p { margin: 0 0 18px; font-size: 14px; color: var(--dim); }
+  #arrivalCard button { background: var(--teal); color: #000; font-weight: bold; padding: 9px 24px; border: none; border-radius: 6px; cursor: pointer; }
 </style>
 </head>
 <body>
 
 <div id="canvasHolder"></div>
 
-<div class="hud panel" id="titleBar">
-  <div>
-    <h1>Pupper V3 導盲犬模擬器</h1>
-    <div class="sub">3D STREET & MULTI-STORE NAVIGATOR</div>
+<!-- Top-Left Combined Mini-Map & Title HUD -->
+<div class="hud panel" id="mapContainer">
+  <div id="mapHeader">
+    <h1>🐕 Pupper 實時導航</h1>
+    <span id="stateBadge">IDLE</span>
   </div>
-  <span id="stateBadge">IDLE</span>
+  <canvas id="minimapCanvas" width="200" height="180"></canvas>
+  <div class="map-legend">
+    <span><i class="dot-legend" style="background:#34d0b6"></i>導盲犬</span>
+    <span><i class="dot-legend" style="background:#f5a623"></i>商店</span>
+    <span><i class="dot-legend" style="background:#e74c3c"></i>車輛</span>
+  </div>
 </div>
 
 <div class="hud" id="storePanel">
@@ -205,7 +246,6 @@
 </div>
 
 <script>
-// --- THREE.JS SCENE SETUP ---
 const scene = new THREE.Scene();
 scene.background = new THREE.Color(0x0a1017);
 scene.fog = new THREE.FogExp2(0x0a1017, 0.015);
@@ -239,7 +279,6 @@ sunLight.shadow.camera.top = 80;
 sunLight.shadow.camera.bottom = -20;
 scene.add(sunLight);
 
-// --- WORLD DIMENSIONS & LAYOUT ---
 const STREET_START = -20;
 const STREET_END = 130;
 const SIDEWALK_X = -3.0;
@@ -296,20 +335,17 @@ for (let x = -4.2; x <= 6.5; x += 1.2) {
   scene.add(stripe);
 }
 
-// --- STORES DEFINITION & BUILDING CREATION ---
 const STORES = {
-  cafe: { name: '暖陽咖啡館', z: 10.0, color: 0x8c6747, signColor: 0xffaa44, targetX: SIDEWALK_X - 1.2 },
-  bakery: { name: '麥香烘焙坊', z: 28.0, color: 0xb58c4c, signColor: 0xffd166, targetX: SIDEWALK_X - 1.2 },
-  mart: { name: '快捷便利商店', z: 65.0, color: 0x2a3e52, signColor: 0x34d0b6, targetX: SIDEWALK_X - 1.2 },
-  pharmacy: { name: '健康連鎖藥局', z: 85.0, color: 0xdddddd, signColor: 0x00e676, targetX: SIDEWALK_X - 1.2 },
-  park: { name: '微風陽光公園', z: 105.0, color: 0x3d6e46, signColor: 0x81c784, targetX: SIDEWALK_X - 1.2 }
+  cafe: { name: '暖陽咖啡館', z: 10.0, color: 0x8c6747, signColor: 0xffaa44, targetX: SIDEWALK_X - 1.2, icon: '☕' },
+  bakery: { name: '麥香烘焙坊', z: 28.0, color: 0xb58c4c, signColor: 0xffd166, targetX: SIDEWALK_X - 1.2, icon: '🍞' },
+  mart: { name: '快捷便利商店', z: 65.0, color: 0x2a3e52, signColor: 0x34d0b6, targetX: SIDEWALK_X - 1.2, icon: '🏪' },
+  pharmacy: { name: '健康連鎖藥局', z: 85.0, color: 0xdddddd, signColor: 0x00e676, targetX: SIDEWALK_X - 1.2, icon: '💊' },
+  park: { name: '微風陽光公園', z: 105.0, color: 0x3d6e46, signColor: 0x81c784, targetX: SIDEWALK_X - 1.2, icon: '🌳' }
 };
 
-// Generic Building Generator
-function createBuilding(x, z, width, depth, height, color, name, signColor, iconSymbol) {
+function createBuilding(x, z, width, depth, height, color, name, signColor) {
   const group = new THREE.Group();
   
-  // Building Main Block
   const mat = new THREE.MeshStandardMaterial({ color: color, roughness: 0.7 });
   const bldg = new THREE.Mesh(new THREE.BoxGeometry(width, height, depth), mat);
   bldg.position.set(0, height / 2, 0);
@@ -317,29 +353,24 @@ function createBuilding(x, z, width, depth, height, color, name, signColor, icon
   bldg.receiveShadow = true;
   group.add(bldg);
 
-  // Store Front Glass Window
   const glassMat = new THREE.MeshStandardMaterial({ color: 0x88ccff, roughness: 0.1, metalness: 0.8, transparent: true, opacity: 0.6 });
   const windowMesh = new THREE.Mesh(new THREE.BoxGeometry(0.1, height * 0.45, depth * 0.7), glassMat);
   windowMesh.position.set(width / 2 + 0.02, height * 0.3, 0);
   group.add(windowMesh);
 
-  // Entrance Door Frame
   const doorFrame = new THREE.Mesh(new THREE.BoxGeometry(0.15, height * 0.5, 1.4), new THREE.MeshStandardMaterial({ color: 0x111111 }));
   doorFrame.position.set(width / 2 + 0.05, height * 0.25, -depth * 0.2);
   group.add(doorFrame);
 
-  // Illuminated Store Signboard
   const signMat = new THREE.MeshStandardMaterial({ color: signColor, emissive: signColor, emissiveIntensity: 0.6 });
   const signBoard = new THREE.Mesh(new THREE.BoxGeometry(0.3, 0.9, depth * 0.85), signMat);
   signBoard.position.set(width / 2 + 0.1, height * 0.75, 0);
   group.add(signBoard);
 
-  // Sign Light Glow
   const pLight = new THREE.PointLight(signColor, 0.8, 8);
   pLight.position.set(width / 2 + 1.0, height * 0.7, 0);
   group.add(pLight);
 
-  // Awning Canvas Canopy (for Cafe/Bakery)
   if (color === 0x8c6747 || color === 0xb58c4c) {
     const awningMat = new THREE.MeshStandardMaterial({ color: 0xc93b2b, roughness: 0.5 });
     const awning = new THREE.Mesh(new THREE.BoxGeometry(1.2, 0.15, depth * 0.8), awningMat);
@@ -353,25 +384,22 @@ function createBuilding(x, z, width, depth, height, color, name, signColor, icon
   return group;
 }
 
-// Build all stores
-createBuilding(-8.5, STORES.cafe.z, 6.0, 7.0, 4.5, STORES.cafe.color, STORES.cafe.name, STORES.cafe.signColor, '☕');
-createBuilding(-8.5, STORES.bakery.z, 6.0, 7.5, 4.8, STORES.bakery.color, STORES.bakery.name, STORES.bakery.signColor, '🍞');
-createBuilding(-8.5, STORES.mart.z, 6.0, 8.5, 5.2, STORES.mart.color, STORES.mart.name, STORES.mart.signColor, '🏪');
-createBuilding(-8.5, STORES.pharmacy.z, 6.0, 7.0, 5.0, STORES.pharmacy.color, STORES.pharmacy.name, STORES.pharmacy.signColor, '💊');
+createBuilding(-8.5, STORES.cafe.z, 6.0, 7.0, 4.5, STORES.cafe.color, STORES.cafe.name, STORES.cafe.signColor);
+createBuilding(-8.5, STORES.bakery.z, 6.0, 7.5, 4.8, STORES.bakery.color, STORES.bakery.name, STORES.bakery.signColor);
+createBuilding(-8.5, STORES.mart.z, 6.0, 8.5, 5.2, STORES.mart.color, STORES.mart.name, STORES.mart.signColor);
+createBuilding(-8.5, STORES.pharmacy.z, 6.0, 7.0, 5.0, STORES.pharmacy.color, STORES.pharmacy.name, STORES.pharmacy.signColor);
 
-// Park Construction (Z=105)
+// Park Setup
 const parkGroup = new THREE.Group();
 const parkGrass = new THREE.Mesh(new THREE.BoxGeometry(12, 0.2, 20), new THREE.MeshStandardMaterial({ color: 0x2e5a36, roughness: 0.8 }));
 parkGrass.position.set(-11, 0, STORES.park.z);
 parkGroup.add(parkGrass);
 
-// Park Bench
 const benchMat = new THREE.MeshStandardMaterial({ color: 0x5c3d21 });
 const bench = new THREE.Mesh(new THREE.BoxGeometry(0.8, 0.5, 2.0), benchMat);
 bench.position.set(-5.5, 0.3, STORES.park.z);
 parkGroup.add(bench);
 
-// Park Trees
 function addParkTree(x, z) {
   const trunk = new THREE.Mesh(new THREE.CylinderGeometry(0.2, 0.25, 2.5, 8), new THREE.MeshStandardMaterial({ color: 0x422d1d }));
   trunk.position.set(x, 1.25, z);
@@ -382,10 +410,9 @@ function addParkTree(x, z) {
 }
 addParkTree(-7.5, STORES.park.z - 4);
 addParkTree(-9.0, STORES.park.z + 5);
-addParkTree(-6.5, 18.0); // Extra street tree
+addParkTree(-6.5, 18.0);
 scene.add(parkGroup);
 
-// --- TRAFFIC LIGHTS & STREET PROPS ---
 const trafficLight = { state: 'GREEN', manualOverrideUntil: 0, autoTimer: 0 };
 
 const poleMat = new THREE.MeshStandardMaterial({ color: 0x333d47, metalness: 0.5 });
@@ -413,7 +440,6 @@ function updateTrafficLightVisual() {
   bulbGreen.material.emissiveIntensity = trafficLight.state === 'GREEN' ? 2.0 : 0.15;
 }
 
-// Street Lamps along sidewalk
 for (let z = STREET_START + 10; z <= STREET_END; z += 25) {
   const lampPole = new THREE.Mesh(new THREE.CylinderGeometry(0.06, 0.08, 4.2, 8), poleMat);
   lampPole.position.set(-1.0, 2.1, z);
@@ -426,7 +452,6 @@ for (let z = STREET_START + 10; z <= STREET_END; z += 25) {
   scene.add(lLight);
 }
 
-// --- CAR TRAFFIC SYSTEM ---
 const vehicles = [];
 
 function createVehicleMesh(type, bodyColor) {
@@ -439,20 +464,16 @@ function createVehicleMesh(type, bodyColor) {
   if (type === 'bus') { length = 8.0; width = 2.2; height = 2.6; }
   else if (type === 'truck') { length = 5.2; width = 2.0; height = 2.1; }
 
-  // Body
   const body = new THREE.Mesh(new THREE.BoxGeometry(width, height * 0.55, length), mainMat);
   body.position.y = height * 0.35 + 0.2;
   body.castShadow = true;
   carGroup.add(body);
 
-  // Cabin / Roof
-  const cabinHeight = height * 0.45;
-  const cabin = new THREE.Mesh(new THREE.BoxGeometry(width * 0.9, cabinHeight, length * 0.55), glassMat);
+  const cabin = new THREE.Mesh(new THREE.BoxGeometry(width * 0.9, height * 0.45, length * 0.55), glassMat);
   cabin.position.set(0, height * 0.7, -length * 0.05);
   cabin.castShadow = true;
   carGroup.add(cabin);
 
-  // Wheels
   const wheels = [];
   const wheelRadius = 0.3;
   const wheelPositions = [
@@ -470,30 +491,9 @@ function createVehicleMesh(type, bodyColor) {
     wheels.push(wheel);
   });
 
-  // Headlights
-  const lightMat = new THREE.MeshStandardMaterial({ color: 0xffffcc, emissive: 0xffffcc, emissiveIntensity: 1.5 });
-  const headlightL = new THREE.Mesh(new THREE.BoxGeometry(0.3, 0.15, 0.1), lightMat);
-  headlightL.position.set(-width * 0.35, height * 0.35, length / 2 + 0.02);
-  const headlightR = headlightL.clone();
-  headlightR.position.x = width * 0.35;
-  carGroup.add(headlightL);
-  carGroup.add(headlightR);
-
-  // Taillights
-  const tailMat = new THREE.MeshStandardMaterial({ color: 0xff2222, emissive: 0xff2222, emissiveIntensity: 1.2 });
-  const taillightL = new THREE.Mesh(new THREE.BoxGeometry(0.3, 0.15, 0.1), tailMat);
-  taillightL.position.set(-width * 0.35, height * 0.35, -length / 2 - 0.02);
-  const taillightR = taillightL.clone();
-  taillightR.position.x = width * 0.35;
-  carGroup.add(taillightL);
-  carGroup.add(taillightR);
-
   return { mesh: carGroup, wheels: wheels, length: length };
 }
 
-// Spawn Vehicles on 2 Lanes
-// Lane 1: Inner Lane (X = 1.8), moving direction +Z (South to North)
-// Lane 2: Outer Lane (X = 5.2), moving direction -Z (North to South)
 const carConfigs = [
   { lane: 1, type: 'car', color: 0xe74c3c, z: -10, speed: 10 },
   { lane: 1, type: 'taxi', color: 0xf1c40f, z: 30, speed: 11 },
@@ -507,12 +507,7 @@ carConfigs.forEach(cfg => {
   const vData = createVehicleMesh(cfg.type, cfg.color);
   const xPos = cfg.lane === 1 ? 1.8 : 5.2;
   vData.mesh.position.set(xPos, 0, cfg.z);
-  
-  // Rotate lane 2 cars to face -Z direction
-  if (cfg.lane === 2) {
-    vData.mesh.rotation.y = Math.PI;
-  }
-  
+  if (cfg.lane === 2) { vData.mesh.rotation.y = Math.PI; }
   scene.add(vData.mesh);
   vehicles.push({
     mesh: vData.mesh,
@@ -520,12 +515,10 @@ carConfigs.forEach(cfg => {
     lane: cfg.lane,
     baseSpeed: cfg.speed,
     currentSpeed: cfg.speed,
-    length: vData.length,
-    x: xPos
+    length: vData.length
   });
 });
 
-// --- PUPPER V3 GUIDE DOG MODEL ---
 const pupper = new THREE.Group();
 const bodyMat = new THREE.MeshStandardMaterial({ color: 0x2a3645, roughness: 0.5 });
 const accentMat = new THREE.MeshStandardMaterial({ color: 0x34d0b6, emissive: 0x0f3d36, emissiveIntensity: 0.4 });
@@ -542,7 +535,6 @@ dogHead.position.set(0, 0.42, 0.35);
 dogHead.castShadow = true;
 torsoGroup.add(dogHead);
 
-// AI Vision Cone
 const cameraFrustum = new THREE.Mesh(
   new THREE.ConeGeometry(0.38, 1.1, 4, 1, true),
   new THREE.MeshBasicMaterial({ color: 0x34d0b6, transparent: true, opacity: 0.2, side: THREE.DoubleSide })
@@ -551,13 +543,11 @@ cameraFrustum.rotation.x = -Math.PI / 2.3;
 cameraFrustum.position.set(0, 0.65, 0.75);
 torsoGroup.add(cameraFrustum);
 
-// Leash Handle
 const leashHandle = new THREE.Mesh(new THREE.TorusGeometry(0.09, 0.02, 8, 16), accentMat);
 leashHandle.rotation.x = Math.PI / 2;
 leashHandle.position.set(0, 0.48, -0.12);
 torsoGroup.add(leashHandle);
 
-// Legs Animation Rig
 const legs = [];
 const legOffsets = [[0.16, 0.24], [-0.16, 0.24], [0.16, -0.24], [-0.16, -0.24]];
 legOffsets.forEach((off, i) => {
@@ -574,7 +564,7 @@ pupper.add(torsoGroup);
 pupper.position.set(SIDEWALK_X, 0.05, 0);
 scene.add(pupper);
 
-// Sensor Raycasters
+// Raycasters
 const raycaster = new THREE.Raycaster();
 function makeRayLine(color) {
   const geo = new THREE.BufferGeometry().setFromPoints([new THREE.Vector3(), new THREE.Vector3()]);
@@ -586,18 +576,15 @@ function makeRayLine(color) {
 const rayForwardLine = makeRayLine(0x34d0b6);
 const rayDownLine = makeRayLine(0x34d0b6);
 
-// --- STATE MANAGEMENT & TELEMETRY ---
 let currentState = 'IDLE';
 let activeTargetKey = null;
 let manualControl = false;
+let arrivalAlertShown = false; // Flag to prevent infinite modal popups!
 const MOVE_SPEED = 2.6;
 
 const telemetry = {
   totalDistance: 0.0,
   lastPos: pupper.position.clone(),
-  accumulatedDeviation: 0.0,
-  stepCount: 0,
-  smoothnessScore: 100,
   logs: []
 };
 
@@ -610,27 +597,27 @@ function logBt(msg) {
   telemetry.logs.push(`[${new Date().toLocaleTimeString()}] ${msg}`);
 }
 
-// Keyboard Listeners
 const keys = {};
 window.addEventListener('keydown', e => { keys[e.key.toLowerCase()] = true; });
 window.addEventListener('keyup', e => { keys[e.key.toLowerCase()] = false; });
 
-// Store Navigation Button Selection
+// Store Selector Buttons
 document.querySelectorAll('.store-btn').forEach(btn => {
   btn.addEventListener('click', e => {
     document.querySelectorAll('.store-btn').forEach(b => b.classList.remove('active'));
     btn.classList.add('active');
     activeTargetKey = btn.dataset.target;
     manualControl = false;
-    currentState = 'NAVIGATING'; // 解除 ARRIVED 鎖定，重新啟用動態導航
-    document.getElementById('arrivalCard').style.display = 'none'; // 隱藏抵達提示框
+    arrivalAlertShown = false; // Reset arrival popup flag for new target
+    currentState = 'NAVIGATING';
+    document.getElementById('arrivalCard').style.display = 'none';
     document.getElementById('btnManual').classList.remove('active');
     document.getElementById('mTarget').textContent = STORES[activeTargetKey].name;
-    logBt(`設定目的地：「${STORES[activeTargetKey].name}」，開始導航！`);
+    logBt(`設定目的地：「${STORES[activeTargetKey].name}」，開啟引導！`);
   });
 });
 
-// HUD Button Events
+// Controls & Actions
 document.getElementById('btnRed').addEventListener('click', () => {
   trafficLight.state = trafficLight.state === 'RED' ? 'GREEN' : 'RED';
   trafficLight.manualOverrideUntil = performance.now() + 8000;
@@ -653,6 +640,7 @@ document.getElementById('btnManual').addEventListener('click', e => {
   e.target.classList.toggle('active', manualControl);
   if (manualControl) {
     activeTargetKey = null;
+    arrivalAlertShown = false;
     document.querySelectorAll('.store-btn').forEach(b => b.classList.remove('active'));
     document.getElementById('mTarget').textContent = 'WASD 手動';
   }
@@ -675,49 +663,150 @@ document.getElementById('btnReset').addEventListener('click', () => {
   pupper.rotation.set(0, 0, 0);
   activeTargetKey = null;
   manualControl = false;
+  arrivalAlertShown = false;
   document.querySelectorAll('.store-btn').forEach(b => b.classList.remove('active'));
   document.getElementById('btnManual').classList.remove('active');
   document.getElementById('mTarget').textContent = '未選擇';
+  document.getElementById('arrivalCard').style.display = 'none';
   if (activeTreeObstacle) { scene.remove(activeTreeObstacle); activeTreeObstacle = null; }
   telemetry.totalDistance = 0.0;
-  telemetry.stepCount = 0;
   currentState = 'IDLE';
-  logBt('位置與導航數據已成功重置');
+  logBt('位置與導航數據已重置');
 });
 
+// Close arrival card logic: ONLY pop up once!
 document.getElementById('btnCloseArrival').addEventListener('click', () => {
   document.getElementById('arrivalCard').style.display = 'none';
-  if (currentState === 'ARRIVED') {
-    currentState = 'IDLE';
-  }
 });
 
-// --- MAIN SIMULATION LOGIC ---
-const clock = new THREE.Clock();
-let gaitTime = 0;
+function drawMinimap() {
+  const canvas = document.getElementById('minimapCanvas');
+  if (!canvas) return;
+  const ctx = canvas.getContext('2d');
+  const w = canvas.width;
+  const h = canvas.height;
+
+  ctx.clearRect(0, 0, w, h);
+
+  // Map limits setup (Z: -15 to 125, X: -12 to 8)
+  const minZ = -15, maxZ = 125;
+  const minX = -12, maxX = 8;
+
+  function toMapX(x) { return ((x - minX) / (maxX - minX)) * w; }
+  function toMapY(z) { return ((z - minZ) / (maxZ - minZ)) * h; }
+
+  // 1. Sidewalk region
+  const swX1 = toMapX(-4.8);
+  const swX2 = toMapX(-1.2);
+  ctx.fillStyle = 'rgba(114, 125, 136, 0.35)';
+  ctx.fillRect(swX1, 0, swX2 - swX1, h);
+
+  // 2. Road region
+  const rX1 = toMapX(0.5);
+  const rX2 = toMapX(6.5);
+  ctx.fillStyle = 'rgba(33, 37, 41, 0.7)';
+  ctx.fillRect(rX1, 0, rX2 - rX1, h);
+
+  // Road center line
+  ctx.strokeStyle = 'rgba(255, 255, 255, 0.3)';
+  ctx.setLineDash([4, 4]);
+  ctx.beginPath();
+  const cX = toMapX(ROAD_CENTER_X);
+  ctx.moveTo(cX, 0);
+  ctx.lineTo(cX, h);
+  ctx.stroke();
+  ctx.setLineDash([]);
+
+  // 3. Crosswalk Z=45
+  const cwY = toMapY(45);
+  ctx.fillStyle = 'rgba(240, 240, 240, 0.75)';
+  ctx.fillRect(swX1, cwY - 3, rX2 - swX1, 6);
+
+  // 4. Target Navigation Route Line
+  if (activeTargetKey && STORES[activeTargetKey]) {
+    const target = STORES[activeTargetKey];
+    ctx.strokeStyle = '#34d0b6';
+    ctx.lineWidth = 1.5;
+    ctx.setLineDash([3, 3]);
+    ctx.beginPath();
+    ctx.moveTo(toMapX(pupper.position.x), toMapY(pupper.position.z));
+    ctx.lineTo(toMapX(target.targetX), toMapY(target.z));
+    ctx.stroke();
+    ctx.setLineDash([]);
+  }
+
+  // 5. Stores on mini-map
+  Object.keys(STORES).forEach(key => {
+    const store = STORES[key];
+    const sx = toMapX(-7.5);
+    const sy = toMapY(store.z);
+    const isTarget = (key === activeTargetKey);
+
+    if (isTarget) {
+      ctx.beginPath();
+      ctx.arc(sx, sy, 8, 0, Math.PI * 2);
+      ctx.fillStyle = 'rgba(52, 208, 182, 0.35)';
+      ctx.fill();
+    }
+
+    ctx.fillStyle = isTarget ? '#34d0b6' : '#f5a623';
+    ctx.beginPath();
+    ctx.arc(sx, sy, 4, 0, Math.PI * 2);
+    ctx.fill();
+
+    // Store Name Label
+    ctx.fillStyle = isTarget ? '#34d0b6' : '#a0b0c0';
+    ctx.font = '9px sans-serif';
+    ctx.fillText(store.name, sx + 7, sy + 3);
+  });
+
+  // 6. Vehicles on mini-map
+  vehicles.forEach(v => {
+    const vx = toMapX(v.mesh.position.x);
+    const vy = toMapY(v.mesh.position.z);
+    ctx.fillStyle = v.lane === 1 ? '#e74c3c' : '#f1c40f';
+    ctx.fillRect(vx - 2, vy - 3, 4, 6);
+  });
+
+  // 7. Pupper Guide Dog Location & Heading Cone
+  const px = toMapX(pupper.position.x);
+  const py = toMapY(pupper.position.z);
+
+  // Direction vision cone on mini-map
+  ctx.fillStyle = 'rgba(52, 208, 182, 0.35)';
+  ctx.beginPath();
+  ctx.moveTo(px, py);
+  const radAngle = pupper.rotation.y + Math.PI / 2;
+  ctx.arc(px, py, 14, radAngle - 0.45, radAngle + 0.45);
+  ctx.closePath();
+  ctx.fill();
+
+  // Pupper marker dot
+  ctx.fillStyle = '#ffffff';
+  ctx.strokeStyle = '#34d0b6';
+  ctx.lineWidth = 2;
+  ctx.beginPath();
+  ctx.arc(px, py, 4.5, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.stroke();
+}
 
 function updateVehicles(delta) {
-  // Traffic stop lines when Pedestrian Light is GREEN (Cars Red)
   const carMustStopForCrosswalk = (trafficLight.state === 'GREEN');
   
   vehicles.forEach(v => {
     let speed = v.baseSpeed;
     const posZ = v.mesh.position.z;
 
-    // Check stop line at crosswalk (Z=45)
     if (carMustStopForCrosswalk) {
       if (v.lane === 1 && posZ >= 33.0 && posZ < 43.0) { speed = 0; }
       else if (v.lane === 2 && posZ <= 57.0 && posZ > 47.0) { speed = 0; }
     }
 
-    // Accelerate/Decelerate smoothly
     v.currentSpeed += (speed - v.currentSpeed) * Math.min(1.0, delta * 4.0);
     v.mesh.position.z += v.currentSpeed * delta;
-
-    // Rotate wheels based on motion
     v.wheels.forEach(w => w.rotation.x += (v.currentSpeed * delta) / 0.3);
 
-    // Loop vehicles back around street ends
     if (v.lane === 1 && v.mesh.position.z > STREET_END) { v.mesh.position.z = STREET_START; }
     if (v.lane === 2 && v.mesh.position.z < STREET_START) { v.mesh.position.z = STREET_END; }
   });
@@ -727,7 +816,6 @@ function updateNavigation(delta) {
   const posZ = pupper.position.z;
   const posX = pupper.position.x;
 
-  // Rays
   const forwardDir = new THREE.Vector3(0, 0, 1).applyQuaternion(pupper.quaternion);
   const sensorFrontPos = pupper.position.clone().add(new THREE.Vector3(0, 0.25, 0)).add(forwardDir.clone().multiplyScalar(0.2));
   raycaster.set(sensorFrontPos, forwardDir);
@@ -739,7 +827,6 @@ function updateNavigation(delta) {
   const groundHits = raycaster.intersectObjects(WALKABLE_SURFACES, false);
   const downDist = groundHits.length ? groundHits[0].distance : 3.0;
 
-  // Crosswalk & Overhead checks
   const isApproachingCrosswalk = (posZ >= 40.0 && posZ < 43.5);
   const isRedLightBlocking = isApproachingCrosswalk && (trafficLight.state === 'RED');
   
@@ -748,7 +835,6 @@ function updateNavigation(delta) {
     isOverheadAhead = true;
   }
 
-  // State Updates
   let nextState = 'IDLE';
   if (isRedLightBlocking) { nextState = 'WAIT_RED_LIGHT'; }
   else if (isOverheadAhead) { nextState = 'OBSTACLE_AVOID'; }
@@ -759,7 +845,9 @@ function updateNavigation(delta) {
 
     if (distToTarget < 0.6 && Math.abs(posX - targetStore.targetX) < 0.5) {
       nextState = 'ARRIVED';
-      if (currentState !== 'ARRIVED') {
+      // POPUP ONCE ONLY LOGIC: Trigger modal pop-up once per destination selection
+      if (!arrivalAlertShown) {
+        arrivalAlertShown = true; // Set flag to prevent repeating popups
         document.getElementById('arrivalTitle').textContent = `🎉 平安抵達 ${targetStore.name}！`;
         document.getElementById('arrivalDesc').textContent = `Pupper V3 導盲犬已順利引導您到達 ${targetStore.name} 前門處。`;
         document.getElementById('arrivalCard').style.display = 'block';
@@ -770,7 +858,6 @@ function updateNavigation(delta) {
     }
   }
 
-  // 允許狀態順暢切換，消除死機現象
   if (nextState !== currentState) {
     currentState = nextState;
     logBt('導航狀態 → ' + currentState);
@@ -778,7 +865,6 @@ function updateNavigation(delta) {
 
   let moving = false;
 
-  // Movement execution
   if (manualControl) {
     if (keys['a']) pupper.position.x -= 1.6 * delta;
     if (keys['d']) pupper.position.x += 1.6 * delta;
@@ -789,19 +875,17 @@ function updateNavigation(delta) {
 
     if (activeTargetKey) {
       const t = STORES[activeTargetKey];
-      // 當靠近目標商店時切換至店家門口 X 座標，否則維持人行道中央
       if (Math.abs(posZ - t.z) < 2.5) {
         desiredX = t.targetX;
       }
       desiredZ = t.z;
     }
 
-    if (isOverheadAhead) { desiredX = SIDEWALK_X - 0.9; } // 避開懸空樹枝
+    if (isOverheadAhead) { desiredX = SIDEWALK_X - 0.9; }
 
     const deltaZ = desiredZ - posZ;
     const deltaX = desiredX - posX;
 
-    // 前後雙向移動與抵達判斷
     if (Math.abs(deltaZ) > 0.25 || Math.abs(deltaX) > 0.25) {
       if (Math.abs(deltaZ) > 0.25) {
         pupper.position.z += Math.sign(deltaZ) * MOVE_SPEED * delta;
@@ -809,31 +893,22 @@ function updateNavigation(delta) {
       moving = true;
     }
 
-    // X 軸平滑移動
     pupper.position.x += deltaX * Math.min(1.0, delta * 3.0);
 
-    // 支援 360 度迴轉角度計算 (前往前方或身後的商店)
     const targetAngle = Math.atan2(deltaX, deltaZ);
     let angleDiff = targetAngle - pupper.rotation.y;
-    
-    // 平滑處理角度跨越 (-PI 到 PI)
     while (angleDiff < -Math.PI) angleDiff += Math.PI * 2;
     while (angleDiff > Math.PI) angleDiff -= Math.PI * 2;
-    
     pupper.rotation.y += angleDiff * Math.min(1.0, delta * 6.0);
   } else {
-    // 待機時緩慢歸零轉角
     pupper.rotation.y += (0 - pupper.rotation.y) * Math.min(1.0, delta * 4.0);
   }
 
-  // Sidewalk bounds clamp
   pupper.position.x = Math.max(-4.5, Math.min(-1.2, pupper.position.x));
 
-  // Telemetry updates
   if (moving) {
     const stepDist = pupper.position.distanceTo(telemetry.lastPos);
     telemetry.totalDistance += stepDist;
-    telemetry.stepCount++;
     telemetry.lastPos.copy(pupper.position);
   }
 
@@ -844,7 +919,6 @@ function updateNavigation(delta) {
   });
   torsoGroup.position.y = moving ? Math.abs(Math.sin(gaitTime * 2)) * 0.025 : 0;
 
-  // Update Line Visualizations
   function setLine(line, from, to, color) {
     const pos = line.geometry.attributes.position;
     pos.setXYZ(0, from.x, from.y, from.z);
@@ -879,7 +953,6 @@ function updateHUD(info) {
     document.getElementById('mTargetDist').textContent = '-- m';
   }
 
-  // Haptic Pull Arrow
   const arrow = document.getElementById('pullArrow');
   const vibeFill = document.getElementById('vibeBarFill');
   const pullLabel = document.getElementById('pullLabel');
@@ -916,11 +989,13 @@ function updateCamera(delta) {
   camera.lookAt(pupper.position.clone().add(new THREE.Vector3(0, 0.4, 1.8)));
 }
 
+const clock = new THREE.Clock();
+let gaitTime = 0;
+
 function animate() {
   requestAnimationFrame(animate);
   const delta = Math.min(clock.getDelta(), 0.1);
 
-  // Automatic traffic light cycle when no manual override
   if (performance.now() > trafficLight.manualOverrideUntil) {
     trafficLight.autoTimer += delta;
     const cycle = trafficLight.autoTimer % 12;
@@ -932,6 +1007,7 @@ function animate() {
   const navInfo = updateNavigation(delta);
   updateCamera(delta);
   updateHUD(navInfo);
+  drawMinimap(); // Render top-left 2D map every frame
 
   renderer.render(scene, camera);
 }
@@ -943,7 +1019,7 @@ window.addEventListener('resize', () => {
   renderer.setSize(window.innerWidth, window.innerHeight);
 });
 
-logBt('街道與雙向車流模擬器已就緒！請選擇頂部商店開啟導航。');
+logBt('街道導航系統與左上角 2D 即時地圖已就緒！');
 </script>
 </body>
 </html>
