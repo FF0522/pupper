@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>GuidPaw</title>
+  <title>GuidPaw 智慧導盲避障系統</title>
   <!-- Tailwind CSS -->
   <script src="https://cdn.tailwindcss.com"></script>
   <!-- Three.js & OrbitControls -->
@@ -162,7 +162,7 @@
   <div class="row"><span><i class="dot" id="dotForward" style="background:#34d0b6"></i>前方 LiDAR 雷達</span><span class="v" id="valForward">-- m</span></div>
   <div class="row"><span><i class="dot" id="dotDown" style="background:#34d0b6"></i>地面階梯 ToF</span><span class="v" id="valDown">-- m</span></div>
   <div class="row"><span><i class="dot" id="dotUp" style="background:#34d0b6"></i>AI 懸空視覺感測</span><span class="v" id="valUp">正常</span></div>
-  <div class="row"><span>GuidPaw 提示狀態</span><span class="v" id="valDogState" style="color:var(--teal)">正常引導</span></div>
+  <div class="row"><span>GuidPaw 提示狀態</span><span class="v" id="valDogState" style="color:var(--teal)">待機中</span></div>
   <div class="row"><span>馬路過街燈號</span><span class="v" id="valLight">--</span></div>
 </div>
 
@@ -256,7 +256,6 @@ sidewalk.receiveShadow = true;
 scene.add(sidewalk);
 WALKABLE_SURFACES.push(sidewalk);
 
-// Staircase Overpass Parameters
 const STAIR_START_Z = 32.0;
 const STAIR_HEIGHT = 1.3;
 const STAIR_COUNT = 8;
@@ -274,7 +273,7 @@ const OVERPASS_PLATFORM_Z = STAIR_START_Z + STAIR_COUNT * STAIR_STEP_DEPTH + PLA
 const DOWN_STAIR_START_Z = STAIR_START_Z + STAIR_COUNT * STAIR_STEP_DEPTH + PLATFORM_LENGTH;
 const DOWN_STAIR_END_Z = DOWN_STAIR_START_Z + STAIR_COUNT * STAIR_STEP_DEPTH;
 
-// Overpass Support Pillars (Ground to Platform deck)
+// Overpass Support Pillars
 const pillar1 = new THREE.Mesh(new THREE.CylinderGeometry(0.18, 0.18, STAIR_HEIGHT, 16), pillarMat);
 pillar1.position.set(SIDEWALK_X - 1.3, STAIR_HEIGHT / 2 - 0.15, STAIR_START_Z + STAIR_COUNT * STAIR_STEP_DEPTH + 0.3);
 pillar1.castShadow = true;
@@ -295,7 +294,7 @@ pillar4.position.set(SIDEWALK_X + 1.3, STAIR_HEIGHT / 2 - 0.15, DOWN_STAIR_START
 pillar4.castShadow = true;
 scene.add(pillar4);
 
-// 1. Up Stairs Steps & Solid Skirt
+// 1. Up Stairs Steps
 for (let i = 0; i < STAIR_COUNT; i++) {
   const stepH = (STAIR_HEIGHT / STAIR_COUNT) * (i + 1);
   const stepZ = STAIR_START_Z + i * STAIR_STEP_DEPTH + STAIR_STEP_DEPTH / 2;
@@ -307,7 +306,7 @@ for (let i = 0; i < STAIR_COUNT; i++) {
   WALKABLE_SURFACES.push(stepMesh);
 }
 
-// Up Stairs Side Stringers (Walls under steps)
+// Up Stairs Side Stringers
 const upStringer = new THREE.Mesh(new THREE.BoxGeometry(3.3, STAIR_HEIGHT, STAIR_COUNT * STAIR_STEP_DEPTH), stairSideMat);
 upStringer.position.set(SIDEWALK_X, STAIR_HEIGHT / 2 - 0.25, STAIR_START_Z + (STAIR_COUNT * STAIR_STEP_DEPTH) / 2);
 upStringer.castShadow = true;
@@ -321,7 +320,7 @@ platformDeck.receiveShadow = true;
 scene.add(platformDeck);
 WALKABLE_SURFACES.push(platformDeck);
 
-// 3. Down Stairs Steps & Solid Rear Skirt Modeling (FIXED: Complete Rear Staircase Structural Fill)
+// 3. Down Stairs Steps
 for (let i = 0; i < STAIR_COUNT; i++) {
   const stepH = STAIR_HEIGHT - (STAIR_HEIGHT / STAIR_COUNT) * i;
   const stepZ = DOWN_STAIR_START_Z + i * STAIR_STEP_DEPTH + STAIR_STEP_DEPTH / 2;
@@ -333,13 +332,12 @@ for (let i = 0; i < STAIR_COUNT; i++) {
   WALKABLE_SURFACES.push(stepMesh);
 }
 
-// Down Stairs Solid Skirt/Wall Base (Structural fill behind stairs)
 const downStringer = new THREE.Mesh(new THREE.BoxGeometry(3.3, STAIR_HEIGHT, STAIR_COUNT * STAIR_STEP_DEPTH), stairSideMat);
 downStringer.position.set(SIDEWALK_X, STAIR_HEIGHT / 2 - 0.25, DOWN_STAIR_START_Z + (STAIR_COUNT * STAIR_STEP_DEPTH) / 2);
 downStringer.castShadow = true;
 scene.add(downStringer);
 
-// Full Length Continuous Handrails & Balusters
+// Handrails
 function createHandrailSection(startX, startY, startZ, endX, endY, endZ) {
   const dx = endX - startX, dy = endY - startY, dz = endZ - startZ;
   const len = Math.sqrt(dx*dx + dy*dy + dz*dz);
@@ -348,14 +346,12 @@ function createHandrailSection(startX, startY, startZ, endX, endY, endZ) {
   const rail = new THREE.Mesh(new THREE.CylinderGeometry(0.04, 0.04, len, 12), railMat);
   rail.position.set(startX + dx/2, startY + dy/2, startZ + dz/2);
   
-  // Rotate to align along direction vector
   const axis = new THREE.Vector3(0, 1, 0);
   const dir = new THREE.Vector3(dx, dy, dz).normalize();
   const quaternion = new THREE.Quaternion().setFromUnitVectors(axis, dir);
   rail.quaternion.copy(quaternion);
   railGroup.add(rail);
 
-  // Add Vertical Support Posts along rail
   const postCount = Math.max(2, Math.floor(len / 1.2));
   for (let i = 0; i <= postCount; i++) {
     const t = i / postCount;
@@ -370,15 +366,11 @@ function createHandrailSection(startX, startY, startZ, endX, endY, endZ) {
   scene.add(railGroup);
 }
 
-// Up Handrails (Left & Right)
+// Handrail Instantiations
 createHandrailSection(SIDEWALK_X - 1.5, 0.9, STAIR_START_Z, SIDEWALK_X - 1.5, STAIR_HEIGHT + 0.9, STAIR_START_Z + STAIR_COUNT * STAIR_STEP_DEPTH);
 createHandrailSection(SIDEWALK_X + 1.5, 0.9, STAIR_START_Z, SIDEWALK_X + 1.5, STAIR_HEIGHT + 0.9, STAIR_START_Z + STAIR_COUNT * STAIR_STEP_DEPTH);
-
-// Deck Handrails (Left & Right)
 createHandrailSection(SIDEWALK_X - 1.5, STAIR_HEIGHT + 0.9, STAIR_START_Z + STAIR_COUNT * STAIR_STEP_DEPTH, SIDEWALK_X - 1.5, STAIR_HEIGHT + 0.9, DOWN_STAIR_START_Z);
 createHandrailSection(SIDEWALK_X + 1.5, STAIR_HEIGHT + 0.9, STAIR_START_Z + STAIR_COUNT * STAIR_STEP_DEPTH, SIDEWALK_X + 1.5, STAIR_HEIGHT + 0.9, DOWN_STAIR_START_Z);
-
-// Down Handrails (Left & Right)
 createHandrailSection(SIDEWALK_X - 1.5, STAIR_HEIGHT + 0.9, DOWN_STAIR_START_Z, SIDEWALK_X - 1.5, 0.9, DOWN_STAIR_END_Z);
 createHandrailSection(SIDEWALK_X + 1.5, STAIR_HEIGHT + 0.9, DOWN_STAIR_START_Z, SIDEWALK_X + 1.5, 0.9, DOWN_STAIR_END_Z);
 
@@ -395,7 +387,7 @@ const downLandingTactile = new THREE.Mesh(new THREE.BoxGeometry(3.0, 0.04, 0.6),
 downLandingTactile.position.set(SIDEWALK_X, 0.02, DOWN_STAIR_END_Z + 0.5);
 scene.add(downLandingTactile);
 
-// Tactile Paving Tiles along Sidewalk
+// Tactile Paving Tiles
 const tactileMat = new THREE.MeshStandardMaterial({ color: 0xeba823, roughness: 0.4 });
 for (let z = STREET_START; z <= STREET_END; z += 0.8) {
   if (z >= STAIR_START_Z - 0.5 && z <= DOWN_STAIR_END_Z + 0.8) continue;
@@ -413,7 +405,6 @@ road.position.set(ROAD_CENTER_X, -0.05, (STREET_START + STREET_END) / 2);
 road.receiveShadow = true;
 scene.add(road);
 
-// Store Definitions
 const STORES = {
   cafe: { name: '暖陽咖啡館', z: 10.0, color: 0x8c6747, signColor: 0xffaa44, targetX: SIDEWALK_X - 1.2, icon: '☕' },
   bakery: { name: '麥香烘焙坊', z: 22.0, color: 0xb58c4c, signColor: 0xffd166, targetX: SIDEWALK_X - 1.2, icon: '🍞' },
@@ -423,7 +414,7 @@ const STORES = {
   park: { name: '微風陽光公園', z: 105.0, color: 0x3d6e46, signColor: 0x81c784, targetX: SIDEWALK_X - 1.2, icon: '🌳' }
 };
 
-function createBuilding(x, z, w, d, h, color, name) {
+function createBuilding(x, z, w, d, h, color) {
   const bGeo = new THREE.BoxGeometry(w, h, d);
   const bMat = new THREE.MeshStandardMaterial({ color: color, roughness: 0.7 });
   const mesh = new THREE.Mesh(bGeo, bMat);
@@ -434,10 +425,10 @@ function createBuilding(x, z, w, d, h, color, name) {
   return mesh;
 }
 
-createBuilding(-8.5, STORES.cafe.z, 6.0, 7.0, 4.5, STORES.cafe.color, STORES.cafe.name);
-createBuilding(-8.5, STORES.bakery.z, 6.0, 7.5, 4.8, STORES.bakery.color, STORES.bakery.name);
-createBuilding(-8.5, STORES.mart.z, 6.0, 8.5, 5.2, STORES.mart.color, STORES.mart.name);
-createBuilding(-8.5, STORES.pharmacy.z, 6.0, 7.0, 5.0, STORES.pharmacy.color, STORES.pharmacy.name);
+createBuilding(-8.5, STORES.cafe.z, 6.0, 7.0, 4.5, STORES.cafe.color);
+createBuilding(-8.5, STORES.bakery.z, 6.0, 7.5, 4.8, STORES.bakery.color);
+createBuilding(-8.5, STORES.mart.z, 6.0, 8.5, 5.2, STORES.mart.color);
+createBuilding(-8.5, STORES.pharmacy.z, 6.0, 7.0, 5.0, STORES.pharmacy.color);
 
 let activeBarrierObstacle = null;
 let activeSignObstacle = null;
@@ -483,6 +474,9 @@ function toggleOverheadSign() {
   const signBoard = new THREE.Mesh(new THREE.BoxGeometry(2.2, 0.8, 0.15), signMat);
   signBoard.position.set(SIDEWALK_X + 0.3, 1.25, zObs);
   signGroup.add(signBoard);
+
+  // Attach precise Z location metadata for detection
+  signGroup.userData = { z: zObs };
 
   scene.add(signGroup);
   activeSignObstacle = signGroup;
@@ -814,9 +808,15 @@ function updateNavigation(delta) {
   const isApproachingCrosswalk = (posZ >= 47.0 && posZ < 50.5);
   const isRedLightBlocking = isApproachingCrosswalk && (trafficLight.state === 'RED');
 
+  // Overhead obstacle proximity detection fix
   let isOverheadAhead = false;
-  if (activeSignObstacle && Math.abs(posZ - (pupper.position.z + 3.5)) < 1.8) {
-    isOverheadAhead = true;
+  if (activeSignObstacle) {
+    const signZ = activeSignObstacle.userData.z !== undefined ? activeSignObstacle.userData.z : (posZ + 3.5);
+    const distToSign = signZ - posZ;
+    // Detect overhead obstacle within 3.8 meters ahead until passed
+    if (distToSign > -0.5 && distToSign < 3.8) {
+      isOverheadAhead = true;
+    }
   }
 
   let nextState = 'IDLE';
@@ -870,6 +870,7 @@ function updateNavigation(delta) {
       logBt('【GuidPaw 警示】過街紅燈，於路緣停步等候');
     } else if (currentState === 'OBSTACLE_AVOID') {
       showToastAlert('🌿', '發現低垂懸空障礙！GuidPaw 側向帶領避讓');
+      logBt('【GuidPaw 警示】偵測到低垂懸空障礙！啟動左側規避線路');
     }
   }
 
@@ -895,6 +896,7 @@ function updateNavigation(delta) {
       desiredZ = t.z;
     }
 
+    // Steer left when encountering low hanging branch/sign
     if (isOverheadAhead) { desiredX = SIDEWALK_X - 0.9; }
     if (currentState === 'ALERT_CONSTRUCTION') { desiredX = SIDEWALK_X + 0.8; }
 
@@ -961,174 +963,176 @@ function updateHUD(info) {
   badge.textContent = currentState;
   
   const dogStateLabel = document.getElementById('valDogState');
-  if (currentState.includes('STAIRS_UP')) {
+  const pullArrow = document.getElementById('pullArrow');
+  const pullLabel = document.getElementById('pullLabel');
+  const vibeBar = document.getElementById('vibeBarFill');
+
+  if (currentState === 'ALERT_STAIRS_UP') {
     dogStateLabel.textContent = '🪜 上階梯停步示警';
-    dogStateLabel.style.color = '#9b8cf2';
-  } else if (currentState.includes('STAIRS_DOWN')) {
-    dogStateLabel.textContent = '⚠️ 下階梯緣停步示警';
-    dogStateLabel.style.color = '#f5a623';
+    dogStateLabel.style.color = 'var(--amber)';
+    pullArrow.textContent = '🛑';
+    pullArrow.style.transform = 'translateY(-2px)';
+    pullLabel.textContent = '上階梯停步（向上牽引）';
+    vibeBar.style.width = '80%';
+    vibeBar.style.background = 'var(--amber)';
+  } else if (currentState === 'ALERT_STAIRS_DOWN') {
+    dogStateLabel.textContent = '⚠️ 下階梯停步示警';
+    dogStateLabel.style.color = 'var(--amber)';
+    pullArrow.textContent = '🛑';
+    pullArrow.style.transform = 'translateY(2px)';
+    pullLabel.textContent = '下階梯停步（向下按壓）';
+    vibeBar.style.width = '80%';
+    vibeBar.style.background = 'var(--amber)';
   } else if (currentState === 'ALERT_CONSTRUCTION') {
-    dogStateLabel.textContent = '🚧 施工圍籬避障';
-    dogStateLabel.style.color = '#e67e22';
+    dogStateLabel.textContent = '🚧 施工圍籬繞行';
+    dogStateLabel.style.color = 'var(--amber)';
+    pullArrow.textContent = '↗️';
+    pullArrow.style.transform = 'rotate(30deg)';
+    pullLabel.textContent = '向右側牽引繞過圍籬';
+    vibeBar.style.width = '65%';
+    vibeBar.style.background = 'var(--amber)';
   } else if (currentState === 'WAIT_RED_LIGHT') {
-    dogStateLabel.textContent = '🚦 紅燈停等';
-    dogStateLabel.style.color = '#e74c3c';
+    dogStateLabel.textContent = '🚦 斑馬線紅燈停等';
+    dogStateLabel.style.color = 'var(--red)';
+    pullArrow.textContent = '⛔';
+    pullArrow.style.transform = 'scale(1.1)';
+    pullLabel.textContent = '紅燈阻擋（保持靜止）';
+    vibeBar.style.width = '100%';
+    vibeBar.style.background = 'var(--red)';
+  } else if (currentState === 'OBSTACLE_AVOID') {
+    dogStateLabel.textContent = '🌿 懸空障礙避讓';
+    dogStateLabel.style.color = 'var(--amber)';
+    pullArrow.textContent = '↖️';
+    pullArrow.style.transform = 'rotate(-30deg)';
+    pullLabel.textContent = '向左側牽引避開低垂障礙';
+    vibeBar.style.width = '70%';
+    vibeBar.style.background = 'var(--amber)';
+  } else if (currentState === 'ARRIVED') {
+    dogStateLabel.textContent = '🎉 已抵達目的地';
+    dogStateLabel.style.color = 'var(--teal)';
+    pullArrow.textContent = '✅';
+    pullArrow.style.transform = 'none';
+    pullLabel.textContent = '到達目標前門';
+    vibeBar.style.width = '0%';
+  } else if (currentState === 'NAVIGATING') {
+    dogStateLabel.textContent = '🐕 正常行進引導';
+    dogStateLabel.style.color = 'var(--teal)';
+    pullArrow.textContent = '⬆️';
+    pullArrow.style.transform = 'none';
+    pullLabel.textContent = '穩定前方牽引';
+    vibeBar.style.width = '30%';
+    vibeBar.style.background = 'var(--teal)';
   } else {
-    dogStateLabel.textContent = '正常引導中';
-    dogStateLabel.style.color = '#34d0b6';
+    dogStateLabel.textContent = '待機中';
+    dogStateLabel.style.color = 'var(--muted)';
+    pullArrow.textContent = '⏸️';
+    pullArrow.style.transform = 'none';
+    pullLabel.textContent = '待機中';
+    vibeBar.style.width = '0%';
   }
 
-  badge.style.borderColor = currentState === 'NAVIGATING' ? '#34d0b6' : '#f5a623';
-  badge.style.color = currentState === 'NAVIGATING' ? '#34d0b6' : '#f5a623';
-
-  document.getElementById('valForward').textContent = info.forwardDist.toFixed(2) + ' m';
-  document.getElementById('valDown').textContent = info.downDist.toFixed(2) + ' m';
-  document.getElementById('valUp').textContent = info.isOverheadAhead ? '發現懸空障礙！' : '正常';
-  document.getElementById('valLight').textContent = trafficLight.state === 'GREEN' ? '綠燈 (安全過街)' : '紅燈 (停等車流)';
-
-  document.getElementById('mDist').textContent = telemetry.totalDistance.toFixed(1) + ' m';
+  document.getElementById('valForward').textContent = `${info.forwardDist.toFixed(1)} m`;
+  document.getElementById('valDown').textContent = info.downDist > 0.15 ? `${info.downDist.toFixed(2)} m (高低差)` : '平地';
+  document.getElementById('valUp').textContent = info.isOverheadAhead ? '⚠️ 偵測到上方低垂障礙' : '正常';
+  document.getElementById('valUp').style.color = info.isOverheadAhead ? 'var(--amber)' : '#fff';
   
-  if (activeTargetKey) {
-    const targetZ = STORES[activeTargetKey].z;
-    const remain = Math.max(0, Math.abs(pupper.position.z - targetZ)).toFixed(1);
-    document.getElementById('mTargetDist').textContent = remain + ' m';
+  document.getElementById('valLight').textContent = trafficLight.state === 'RED' ? '🔴 紅燈' : (trafficLight.state === 'YELLOW' ? '🟡 黃燈' : '🟢 綠燈');
+
+  document.getElementById('mDist').textContent = `${telemetry.totalDistance.toFixed(1)} m`;
+  if (activeTargetKey && STORES[activeTargetKey]) {
+    const t = STORES[activeTargetKey];
+    const rem = Math.abs(pupper.position.z - t.z);
+    document.getElementById('mTargetDist').textContent = `${rem.toFixed(1)} m`;
   } else {
     document.getElementById('mTargetDist').textContent = '-- m';
   }
-
-  const arrow = document.getElementById('pullArrow');
-  const vibeFill = document.getElementById('vibeBarFill');
-  const pullLabel = document.getElementById('pullLabel');
-
-  if (currentState === 'ALERT_STAIRS_UP') {
-    arrow.style.transform = 'rotate(-90deg)';
-    vibeFill.style.width = '75%';
-    vibeFill.style.background = '#9b8cf2';
-    pullLabel.textContent = '牽繩雙短脈衝（上階梯示警）';
-  } else if (currentState === 'ALERT_STAIRS_DOWN') {
-    arrow.style.transform = 'rotate(90deg)';
-    vibeFill.style.width = '90%';
-    vibeFill.style.background = '#f5a623';
-    pullLabel.textContent = '牽繩三長脈衝（下階梯邊緣示警）';
-  } else if (currentState === 'ALERT_CONSTRUCTION') {
-    arrow.style.transform = 'rotate(45deg)';
-    vibeFill.style.width = '80%';
-    vibeFill.style.background = '#e67e22';
-    pullLabel.textContent = '牽繩右側引導（繞過施工圍籬）';
-  } else if (currentState === 'OBSTACLE_AVOID') {
-    arrow.style.transform = 'rotate(-35deg)';
-    vibeFill.style.width = '85%';
-    vibeFill.style.background = '#e8735d';
-    pullLabel.textContent = '牽繩向左避障引導';
-  } else if (currentState === 'WAIT_RED_LIGHT') {
-    arrow.style.transform = 'rotate(0deg)';
-    vibeFill.style.width = '40%';
-    vibeFill.style.background = '#f5a623';
-    pullLabel.textContent = '輕微脈衝（停等紅燈）';
-  } else if (currentState === 'NAVIGATING') {
-    arrow.style.transform = 'rotate(0deg)';
-    vibeFill.style.width = '15%';
-    vibeFill.style.background = '#34d0b6';
-    pullLabel.textContent = '穩定前行引導';
-  } else {
-    arrow.style.transform = 'rotate(0deg)';
-    vibeFill.style.width = '0%';
-    pullLabel.textContent = '待機中';
-  }
 }
-
-function updateCamera(delta) {
-  if (birdView) {
-    orbitControls.update();
-    return;
-  }
-  const desired = pupper.position.clone().add(new THREE.Vector3(0, 2.5, -4.8));
-  camera.position.lerp(desired, Math.min(1, delta * 5));
-  camera.lookAt(pupper.position.clone().add(new THREE.Vector3(0, 0.4, 1.8)));
-}
-
-// UI Event Listeners
-document.querySelectorAll('.store-btn').forEach(btn => {
-  btn.addEventListener('click', () => {
-    const targetKey = btn.getAttribute('data-target');
-    activeTargetKey = targetKey;
-    arrivalAlertShown = false;
-    document.getElementById('arrivalCard').style.display = 'none';
-    document.querySelectorAll('.store-btn').forEach(b => b.classList.remove('active'));
-    btn.classList.add('active');
-    logBt(`設定 GuidPaw 導航目標：${STORES[targetKey].name}`);
-  });
-});
-
-document.getElementById('btnStairs').addEventListener('click', () => {
-  pupper.position.set(SIDEWALK_X, 0.05, STAIR_START_Z - 3.0);
-  pupper.rotation.set(0, 0, 0);
-  logBt('快速移動至「景觀陸橋階梯」入口準備測試 GuidPaw 階梯警示');
-});
-
-document.getElementById('btnBarrier').addEventListener('click', () => {
-  toggleConstructionBarrier();
-});
-
-document.getElementById('btnBranch').addEventListener('click', () => {
-  toggleOverheadSign();
-});
-
-document.getElementById('btnManual').addEventListener('click', (e) => {
-  manualControl = !manualControl;
-  e.target.classList.toggle('active', manualControl);
-  logBt(manualControl ? '切換至 WASD 手動操控模式' : '切換至 GuidPaw AI 自動導航模式');
-});
-
-document.getElementById('btnRed').addEventListener('click', () => {
-  trafficLight.manualOverrideUntil = performance.now() + 8000;
-  trafficLight.state = trafficLight.state === 'RED' ? 'GREEN' : 'RED';
-  logBt(`手動切換斑馬線燈號為：${trafficLight.state}`);
-});
-
-document.getElementById('btnCamera').addEventListener('click', () => {
-  birdView = !birdView;
-  orbitControls.enabled = birdView;
-  if (birdView) {
-    camera.position.set(-3, 22, 35);
-    camera.lookAt(-3, 0, 35);
-  }
-  logBt(birdView ? '切換至鳥瞰視角 (可滑鼠旋轉)' : '切換至第一人稱跟隨視角');
-});
-
-document.getElementById('btnReset').addEventListener('click', () => {
-  pupper.position.set(SIDEWALK_X, 0.05, 0);
-  pupper.rotation.set(0, 0, 0);
-  activeTargetKey = null;
-  arrivalAlertShown = false;
-  document.getElementById('arrivalCard').style.display = 'none';
-  document.querySelectorAll('.store-btn').forEach(b => b.classList.remove('active'));
-  logBt('GuidPaw 導盲系統已重置至初始位置');
-});
 
 const clock = new THREE.Clock();
 let gaitTime = 0;
 
 function animate() {
   requestAnimationFrame(animate);
+
   const delta = Math.min(clock.getDelta(), 0.1);
 
-  if (performance.now() > trafficLight.manualOverrideUntil) {
+  // Traffic Light Auto Loop
+  if (Date.now() > trafficLight.manualOverrideUntil) {
     trafficLight.autoTimer += delta;
-    const cycle = trafficLight.autoTimer % 12;
-    trafficLight.state = cycle < 6 ? 'GREEN' : (cycle < 7 ? 'YELLOW' : 'RED');
+    if (trafficLight.autoTimer > 12.0) {
+      trafficLight.state = trafficLight.state === 'RED' ? 'GREEN' : 'RED';
+      trafficLight.autoTimer = 0;
+      updateTrafficLightVisual();
+    }
   }
-  updateTrafficLightVisual();
 
   updateVehicles(delta);
-  const navInfo = updateNavigation(delta);
-  updateCamera(delta);
-  updateHUD(navInfo);
+  const info = updateNavigation(delta);
   drawMinimap();
+  updateHUD(info);
+
+  // Dynamic Camera Positioning
+  if (birdView) {
+    camera.position.x = pupper.position.x;
+    camera.position.y = 18;
+    camera.position.z = pupper.position.z - 0.1;
+    camera.lookAt(pupper.position.x, 0, pupper.position.z);
+  } else {
+    const targetCamPos = pupper.position.clone().add(new THREE.Vector3(0, 2.8, -4.5));
+    camera.position.lerp(targetCamPos, delta * 4.0);
+    const lookTarget = pupper.position.clone().add(new THREE.Vector3(0, 0.8, 3.0));
+    camera.lookAt(lookTarget);
+  }
 
   renderer.render(scene, camera);
 }
-animate();
+
+// Control Button Handlers
+document.querySelectorAll('.store-btn').forEach(btn => {
+  btn.addEventListener('click', () => {
+    document.querySelectorAll('.store-btn').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+    activeTargetKey = btn.dataset.target;
+    manualControl = false;
+    arrivalAlertShown = false;
+    logBt(`切換目的地為：${STORES[activeTargetKey].name}`);
+  });
+});
+
+document.getElementById('btnStairs').addEventListener('click', () => {
+  pupper.position.set(SIDEWALK_X, 0.05, STAIR_START_Z - 2.5);
+  logBt('快速跳轉至陸橋階梯前');
+});
+
+document.getElementById('btnRed').addEventListener('click', () => {
+  trafficLight.state = trafficLight.state === 'RED' ? 'GREEN' : 'RED';
+  trafficLight.manualOverrideUntil = Date.now() + 15000;
+  updateTrafficLightVisual();
+  logBt(`手動切換號誌燈為：${trafficLight.state}`);
+});
+
+document.getElementById('btnBranch').addEventListener('click', toggleOverheadSign);
+document.getElementById('btnBarrier').addEventListener('click', toggleConstructionBarrier);
+
+document.getElementById('btnManual').addEventListener('click', (e) => {
+  manualControl = !manualControl;
+  e.target.classList.toggle('active', manualControl);
+  logBt(manualControl ? '切換為 WASD 手動操控模式' : '切換為 GuidPaw 自動導航模式');
+});
+
+document.getElementById('btnCamera').addEventListener('click', () => {
+  birdView = !birdView;
+  logBt(birdView ? '切換為鳥瞰全景視角' : '切換為跟隨狗視角');
+});
+
+document.getElementById('btnReset').addEventListener('click', () => {
+  pupper.position.set(SIDEWALK_X, 0.05, 0);
+  activeTargetKey = null;
+  manualControl = false;
+  arrivalAlertShown = false;
+  document.querySelectorAll('.store-btn').forEach(b => b.classList.remove('active'));
+  logBt('系統與位置重置完成');
+});
 
 window.addEventListener('resize', () => {
   camera.aspect = window.innerWidth / window.innerHeight;
@@ -1136,7 +1140,12 @@ window.addEventListener('resize', () => {
   renderer.setSize(window.innerWidth, window.innerHeight);
 });
 
-logBt('GuidPaw 導盲犬 AI 模擬導航系統初始化完畢！');
+// Start Animation Loop on Window Load
+window.onload = function() {
+  updateTrafficLightVisual();
+  animate();
+  logBt('GuidPaw 系統初始化完成，連線正常');
+};
 </script>
 </body>
 </html>
