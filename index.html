@@ -1,0 +1,949 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Pupper V3 智慧導盲犬 · 動態街道與多商店 3D 模擬器</title>
+<script src="https://unpkg.com/three@0.128.0/build/three.min.js"></script>
+<script src="https://unpkg.com/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
+<style>
+  :root {
+    --panel: rgba(18, 25, 35, 0.88);
+    --line: #2e3e52;
+    --text: #e7ecf2;
+    --dim: #8fa0b4;
+    --teal: #34d0b6;
+    --amber: #f5a623;
+    --coral: #e8735d;
+    --red: #e85252;
+    --purple: #9b8cf2;
+    --blue: #4a90e2;
+  }
+  html, body {
+    margin: 0;
+    padding: 0;
+    overflow: hidden;
+    background: #090e14;
+    font-family: 'Segoe UI', -apple-system, BlinkMacSystemFont, sans-serif;
+  }
+  #canvasHolder {
+    position: fixed;
+    inset: 0;
+  }
+  #canvasHolder canvas {
+    display: block;
+  }
+
+  /* HUD Styling */
+  .hud {
+    position: fixed;
+    color: var(--text);
+    z-index: 10;
+    user-select: none;
+  }
+  .panel {
+    background: var(--panel);
+    border: 1px solid var(--line);
+    border-radius: 8px;
+    backdrop-filter: blur(8px);
+    padding: 10px 14px;
+    box-shadow: 0 4px 20px rgba(0,0,0,0.4);
+  }
+
+  /* Header Bar */
+  #titleBar { top: 14px; left: 14px; display: flex; align-items: center; gap: 12px; }
+  #titleBar h1 { font-size: 15px; font-weight: 700; margin: 0; letter-spacing: 0.5px; }
+  #titleBar .sub { font-size: 10px; color: var(--dim); font-family: monospace; }
+  #stateBadge {
+    font-family: monospace;
+    font-size: 11px;
+    font-weight: 700;
+    padding: 4px 10px;
+    border-radius: 4px;
+    border: 1px solid var(--line);
+    letter-spacing: 0.5px;
+    transition: all 0.25s ease;
+  }
+
+  /* Store Selector Panel */
+  #storePanel {
+    top: 14px; left: 50%; transform: translateX(-50%);
+    display: flex; gap: 6px; flex-wrap: wrap; justify-content: center;
+    max-width: 90vw;
+  }
+  .store-btn {
+    font-size: 12px;
+    font-weight: 600;
+    background: #182332;
+    border: 1px solid #32445a;
+    border-radius: 6px;
+    color: var(--text);
+    padding: 7px 12px;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    display: flex;
+    align-items: center;
+    gap: 5px;
+  }
+  .store-btn:hover { background: #23344a; border-color: var(--teal); color: var(--teal); }
+  .store-btn.active { background: #0f3d36; border-color: var(--teal); color: var(--teal); box-shadow: 0 0 8px rgba(52,208,182,0.4); }
+
+  /* Sensor HUD */
+  #sensorPanel { bottom: 14px; left: 14px; width: 220px; font-size: 12px; font-family: monospace; }
+  #sensorPanel .row { display: flex; justify-content: space-between; padding: 3px 0; color: var(--dim); }
+  #sensorPanel .row span.v { color: var(--text); font-weight: 600; }
+  #sensorPanel .dot { display: inline-block; width: 7px; height: 7px; border-radius: 50%; margin-right: 6px; }
+
+  /* Telemetry Panel */
+  #telemetryPanel { top: 70px; right: 14px; width: 240px; font-size: 11px; font-family: monospace; }
+  #telemetryPanel h3 { font-size: 11px; text-transform: uppercase; letter-spacing: 0.6px; color: var(--teal); margin: 0 0 8px; font-weight: 700; display: flex; justify-content: space-between; }
+  #telemetryPanel .metric { display: flex; justify-content: space-between; padding: 3px 0; border-bottom: 1px solid #1a2736; }
+  #telemetryPanel .metric-val { font-weight: bold; color: #ffffff; }
+
+  /* Haptic & Event Panel */
+  #hapticPanel { top: 260px; right: 14px; width: 240px; }
+  #hapticPanel h3 { font-size: 11px; text-transform: uppercase; letter-spacing: 0.6px; color: var(--dim); margin: 0 0 8px; font-weight: 600; }
+  #pullArrowWrap { display: flex; align-items: center; gap: 8px; margin-bottom: 6px; }
+  #pullArrow { width: 22px; height: 22px; transition: transform 0.3s ease; }
+  #pullLabel { font-size: 11px; color: var(--dim); }
+  #vibeBarBg { width: 100%; height: 5px; background: #1c2836; border-radius: 3px; overflow: hidden; margin-bottom: 8px; }
+  #vibeBarFill { height: 100%; width: 0%; background: var(--teal); transition: width 0.25s ease, background 0.25s ease; }
+  #btLog { font-size: 11px; font-family: monospace; color: var(--dim); max-height: 85px; overflow-y: auto; border-top: 1px solid var(--line); padding-top: 6px; }
+  #btLog div { padding: 2px 0; }
+
+  /* Bottom Controls */
+  #bottomBar { bottom: 14px; left: 50%; transform: translateX(-50%); display: flex; gap: 8px; flex-wrap: wrap; max-width: 90vw; justify-content: center; }
+  button {
+    font-family: inherit; font-size: 12px; color: var(--text); background: #172332; border: 1px solid var(--line);
+    border-radius: 6px; padding: 8px 12px; cursor: pointer; white-space: nowrap; transition: all 0.15s ease;
+  }
+  button:hover { background: #223247; border-color: #55708a; }
+  button:active { transform: scale(0.96); }
+  button.danger { background: #4a1414; border-color: var(--red); color: #ff9999; }
+  button.active { background: #0f3d36; border-color: var(--teal); color: var(--teal); }
+
+  /* Destination Arrival Overlay Card */
+  #arrivalCard {
+    display: none;
+    position: fixed;
+    top: 50%; left: 50%;
+    transform: translate(-50%, -50%);
+    background: rgba(15, 23, 34, 0.95);
+    border: 2px solid var(--teal);
+    border-radius: 12px;
+    padding: 20px 28px;
+    text-align: center;
+    z-index: 100;
+    box-shadow: 0 10px 30px rgba(52,208,182,0.3);
+    animation: popIn 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+  }
+  @keyframes popIn { 0% { transform: translate(-50%, -40%) scale(0.8); opacity: 0; } 100% { transform: translate(-50%, -50%) scale(1); opacity: 1; } }
+  #arrivalCard h2 { margin: 0 0 8px; color: var(--teal); font-size: 20px; }
+  #arrivalCard p { margin: 0 0 16px; font-size: 14px; color: var(--dim); }
+  #arrivalCard button { background: var(--teal); color: #000; font-weight: bold; padding: 8px 20px; border: none; }
+</style>
+</head>
+<body>
+
+<div id="canvasHolder"></div>
+
+<div class="hud panel" id="titleBar">
+  <div>
+    <h1>Pupper V3 導盲犬模擬器</h1>
+    <div class="sub">3D STREET & MULTI-STORE NAVIGATOR</div>
+  </div>
+  <span id="stateBadge">IDLE</span>
+</div>
+
+<div class="hud" id="storePanel">
+  <button class="store-btn" data-target="cafe">☕ 暖陽咖啡館</button>
+  <button class="store-btn" data-target="bakery">🍞 麥香烘焙坊</button>
+  <button class="store-btn" data-target="mart">🏪 快捷便利商店</button>
+  <button class="store-btn" data-target="pharmacy">💊 健康藥局</button>
+  <button class="store-btn" data-target="park">🌳 微風陽光公園</button>
+</div>
+
+<div class="hud panel" id="sensorPanel">
+  <div class="row"><span><i class="dot" id="dotForward" style="background:#34d0b6"></i>前方光學雷達</span><span class="v" id="valForward">-- m</span></div>
+  <div class="row"><span><i class="dot" id="dotDown" style="background:#34d0b6"></i>地面/階梯 ToF</span><span class="v" id="valDown">-- m</span></div>
+  <div class="row"><span><i class="dot" id="dotUp" style="background:#34d0b6"></i>AI 懸空視覺</span><span class="v" id="valUp">正常</span></div>
+  <div class="row"><span>馬路過街燈號</span><span class="v" id="valLight">--</span></div>
+  <div class="row"><span>周邊車流量</span><span class="v" id="valTraffic">雙向正常</span></div>
+</div>
+
+<div class="hud panel" id="telemetryPanel">
+  <h3>📊 導航數據與車流監控 <span style="font-size:9px; color:var(--teal)">LIVE</span></h3>
+  <div class="metric"><span>目前標地</span><span class="metric-val" id="mTarget">未選擇</span></div>
+  <div class="metric"><span>總行走距離</span><span class="metric-val" id="mDist">0.0 m</span></div>
+  <div class="metric"><span>行進姿態偏離</span><span class="metric-val" id="mDev">0.00 m</span></div>
+  <div class="metric"><span>避障反應平滑度</span><span class="metric-val" id="mSmooth">100%</span></div>
+  <div class="metric"><span>與當前目標距離</span><span class="metric-val" id="mTargetDist">-- m</span></div>
+</div>
+
+<div class="hud panel" id="hapticPanel">
+  <h3>牽繩觸覺反饋 HAPTIC LEASH</h3>
+  <div id="pullArrowWrap">
+    <svg id="pullArrow" viewBox="0 0 24 24" fill="none" stroke="#8fa0b4" stroke-width="2"><path d="M12 19V5M12 5l-5 5M12 5l5 5"/></svg>
+    <span id="pullLabel">待機中</span>
+  </div>
+  <div id="vibeBarBg"><div id="vibeBarFill"></div></div>
+  <div id="btLog"></div>
+</div>
+
+<div class="hud" id="bottomBar">
+  <button id="btnRed">🚦 切換斑馬線紅燈</button>
+  <button id="btnBranch">🌿 產生樹枝懸空障礙</button>
+  <button id="btnManual">🎮 WASD 手動操控</button>
+  <button id="btnCamera">📷 切換視角 (隨狗/鳥瞰)</button>
+  <button id="btnReset" class="danger">⚡ 重置位置</button>
+</div>
+
+<div id="arrivalCard">
+  <h2 id="arrivalTitle">🎉 已平安抵達！</h2>
+  <p id="arrivalDesc">導盲犬 Pupper V3 已安全引導您到達目的地。</p>
+  <button id="btnCloseArrival">確認並繼續</button>
+</div>
+
+<script>
+// --- THREE.JS SCENE SETUP ---
+const scene = new THREE.Scene();
+scene.background = new THREE.Color(0x0a1017);
+scene.fog = new THREE.FogExp2(0x0a1017, 0.015);
+
+const camera = new THREE.PerspectiveCamera(60, window.innerWidth / window.innerHeight, 0.1, 250);
+camera.position.set(-3, 3.5, -6);
+
+const renderer = new THREE.WebGLRenderer({ antialias: true });
+renderer.setSize(window.innerWidth, window.innerHeight);
+renderer.shadowMap.enabled = true;
+renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+document.getElementById('canvasHolder').appendChild(renderer.domElement);
+
+const orbitControls = new THREE.OrbitControls(camera, renderer.domElement);
+orbitControls.enabled = false;
+orbitControls.enableDamping = true;
+
+// Lighting Setup
+const ambientLight = new THREE.AmbientLight(0x9cb0c5, 0.7);
+scene.add(ambientLight);
+
+const sunLight = new THREE.DirectionalLight(0xfff5ea, 1.1);
+sunLight.position.set(20, 35, -15);
+sunLight.castShadow = true;
+sunLight.shadow.mapSize.set(2048, 2048);
+sunLight.shadow.camera.near = 0.5;
+sunLight.shadow.camera.far = 150;
+sunLight.shadow.camera.left = -30;
+sunLight.shadow.camera.right = 30;
+sunLight.shadow.camera.top = 80;
+sunLight.shadow.camera.bottom = -20;
+scene.add(sunLight);
+
+// --- WORLD DIMENSIONS & LAYOUT ---
+const STREET_START = -20;
+const STREET_END = 130;
+const SIDEWALK_X = -3.0;
+const ROAD_CENTER_X = 3.5;
+const WALKABLE_SURFACES = [];
+
+// Ground Base (Grass Field)
+const groundMat = new THREE.MeshStandardMaterial({ color: 0x142019, roughness: 0.95 });
+const ground = new THREE.Mesh(new THREE.PlaneGeometry(250, STREET_END - STREET_START + 40), groundMat);
+ground.rotation.x = -Math.PI / 2;
+ground.position.set(0, -0.2, (STREET_START + STREET_END) / 2);
+ground.receiveShadow = true;
+scene.add(ground);
+
+// Sidewalk Paving (-4.8 to -1.2)
+const sidewalkMat = new THREE.MeshStandardMaterial({ color: 0x727d88, roughness: 0.6 });
+const sidewalk = new THREE.Mesh(new THREE.BoxGeometry(3.6, 0.3, STREET_END - STREET_START), sidewalkMat);
+sidewalk.position.set(SIDEWALK_X, -0.15, (STREET_START + STREET_END) / 2);
+sidewalk.receiveShadow = true;
+scene.add(sidewalk);
+WALKABLE_SURFACES.push(sidewalk);
+
+// Yellow Tactile Paving Line along Sidewalk
+const tactileMat = new THREE.MeshStandardMaterial({ color: 0xeba823, roughness: 0.4 });
+for (let z = STREET_START; z <= STREET_END; z += 0.8) {
+  const tile = new THREE.Mesh(new THREE.BoxGeometry(0.7, 0.03, 0.7), tactileMat);
+  tile.position.set(SIDEWALK_X, 0.01, z);
+  tile.receiveShadow = true;
+  scene.add(tile);
+  WALKABLE_SURFACES.push(tile);
+}
+
+// Asphalt Road Lanes (X: 0.5 to 6.5)
+const roadMat = new THREE.MeshStandardMaterial({ color: 0x212529, roughness: 0.8 });
+const road = new THREE.Mesh(new THREE.BoxGeometry(7.0, 0.28, STREET_END - STREET_START), roadMat);
+road.position.set(ROAD_CENTER_X, -0.16, (STREET_START + STREET_END) / 2);
+road.receiveShadow = true;
+scene.add(road);
+
+// Road Center Divider Line (Dashed White)
+const lineMat = new THREE.MeshStandardMaterial({ color: 0xe0e0e0, roughness: 0.5 });
+for (let z = STREET_START; z <= STREET_END; z += 4.0) {
+  const lineSegment = new THREE.Mesh(new THREE.BoxGeometry(0.2, 0.02, 2.2), lineMat);
+  lineSegment.position.set(ROAD_CENTER_X, 0.01, z);
+  scene.add(lineSegment);
+}
+
+// Zebra Crosswalk at Z = 45
+const CROSSWALK_Z = 45.0;
+const stripeMat = new THREE.MeshStandardMaterial({ color: 0xf0f0f0, roughness: 0.4 });
+for (let x = -4.2; x <= 6.5; x += 1.2) {
+  const stripe = new THREE.Mesh(new THREE.BoxGeometry(0.7, 0.025, 4.5), stripeMat);
+  stripe.position.set(x, 0.012, CROSSWALK_Z);
+  scene.add(stripe);
+}
+
+// --- STORES DEFINITION & BUILDING CREATION ---
+const STORES = {
+  cafe: { name: '暖陽咖啡館', z: 10.0, color: 0x8c6747, signColor: 0xffaa44, targetX: SIDEWALK_X - 1.2 },
+  bakery: { name: '麥香烘焙坊', z: 28.0, color: 0xb58c4c, signColor: 0xffd166, targetX: SIDEWALK_X - 1.2 },
+  mart: { name: '快捷便利商店', z: 65.0, color: 0x2a3e52, signColor: 0x34d0b6, targetX: SIDEWALK_X - 1.2 },
+  pharmacy: { name: '健康連鎖藥局', z: 85.0, color: 0xdddddd, signColor: 0x00e676, targetX: SIDEWALK_X - 1.2 },
+  park: { name: '微風陽光公園', z: 105.0, color: 0x3d6e46, signColor: 0x81c784, targetX: SIDEWALK_X - 1.2 }
+};
+
+// Generic Building Generator
+function createBuilding(x, z, width, depth, height, color, name, signColor, iconSymbol) {
+  const group = new THREE.Group();
+  
+  // Building Main Block
+  const mat = new THREE.MeshStandardMaterial({ color: color, roughness: 0.7 });
+  const bldg = new THREE.Mesh(new THREE.BoxGeometry(width, height, depth), mat);
+  bldg.position.set(0, height / 2, 0);
+  bldg.castShadow = true;
+  bldg.receiveShadow = true;
+  group.add(bldg);
+
+  // Store Front Glass Window
+  const glassMat = new THREE.MeshStandardMaterial({ color: 0x88ccff, roughness: 0.1, metalness: 0.8, transparent: true, opacity: 0.6 });
+  const windowMesh = new THREE.Mesh(new THREE.BoxGeometry(0.1, height * 0.45, depth * 0.7), glassMat);
+  windowMesh.position.set(width / 2 + 0.02, height * 0.3, 0);
+  group.add(windowMesh);
+
+  // Entrance Door Frame
+  const doorFrame = new THREE.Mesh(new THREE.BoxGeometry(0.15, height * 0.5, 1.4), new THREE.MeshStandardMaterial({ color: 0x111111 }));
+  doorFrame.position.set(width / 2 + 0.05, height * 0.25, -depth * 0.2);
+  group.add(doorFrame);
+
+  // Illuminated Store Signboard
+  const signMat = new THREE.MeshStandardMaterial({ color: signColor, emissive: signColor, emissiveIntensity: 0.6 });
+  const signBoard = new THREE.Mesh(new THREE.BoxGeometry(0.3, 0.9, depth * 0.85), signMat);
+  signBoard.position.set(width / 2 + 0.1, height * 0.75, 0);
+  group.add(signBoard);
+
+  // Sign Light Glow
+  const pLight = new THREE.PointLight(signColor, 0.8, 8);
+  pLight.position.set(width / 2 + 1.0, height * 0.7, 0);
+  group.add(pLight);
+
+  // Awning Canvas Canopy (for Cafe/Bakery)
+  if (color === 0x8c6747 || color === 0xb58c4c) {
+    const awningMat = new THREE.MeshStandardMaterial({ color: 0xc93b2b, roughness: 0.5 });
+    const awning = new THREE.Mesh(new THREE.BoxGeometry(1.2, 0.15, depth * 0.8), awningMat);
+    awning.position.set(width / 2 + 0.6, height * 0.55, 0);
+    awning.rotation.z = -0.2;
+    group.add(awning);
+  }
+
+  group.position.set(x, 0, z);
+  scene.add(group);
+  return group;
+}
+
+// Build all stores
+createBuilding(-8.5, STORES.cafe.z, 6.0, 7.0, 4.5, STORES.cafe.color, STORES.cafe.name, STORES.cafe.signColor, '☕');
+createBuilding(-8.5, STORES.bakery.z, 6.0, 7.5, 4.8, STORES.bakery.color, STORES.bakery.name, STORES.bakery.signColor, '🍞');
+createBuilding(-8.5, STORES.mart.z, 6.0, 8.5, 5.2, STORES.mart.color, STORES.mart.name, STORES.mart.signColor, '🏪');
+createBuilding(-8.5, STORES.pharmacy.z, 6.0, 7.0, 5.0, STORES.pharmacy.color, STORES.pharmacy.name, STORES.pharmacy.signColor, '💊');
+
+// Park Construction (Z=105)
+const parkGroup = new THREE.Group();
+const parkGrass = new THREE.Mesh(new THREE.BoxGeometry(12, 0.2, 20), new THREE.MeshStandardMaterial({ color: 0x2e5a36, roughness: 0.8 }));
+parkGrass.position.set(-11, 0, STORES.park.z);
+parkGroup.add(parkGrass);
+
+// Park Bench
+const benchMat = new THREE.MeshStandardMaterial({ color: 0x5c3d21 });
+const bench = new THREE.Mesh(new THREE.BoxGeometry(0.8, 0.5, 2.0), benchMat);
+bench.position.set(-5.5, 0.3, STORES.park.z);
+parkGroup.add(bench);
+
+// Park Trees
+function addParkTree(x, z) {
+  const trunk = new THREE.Mesh(new THREE.CylinderGeometry(0.2, 0.25, 2.5, 8), new THREE.MeshStandardMaterial({ color: 0x422d1d }));
+  trunk.position.set(x, 1.25, z);
+  const foliage = new THREE.Mesh(new THREE.SphereGeometry(1.4, 8, 8), new THREE.MeshStandardMaterial({ color: 0x1e5229, roughness: 0.8 }));
+  foliage.position.set(x, 2.8, z);
+  scene.add(trunk);
+  scene.add(foliage);
+}
+addParkTree(-7.5, STORES.park.z - 4);
+addParkTree(-9.0, STORES.park.z + 5);
+addParkTree(-6.5, 18.0); // Extra street tree
+scene.add(parkGroup);
+
+// --- TRAFFIC LIGHTS & STREET PROPS ---
+const trafficLight = { state: 'GREEN', manualOverrideUntil: 0, autoTimer: 0 };
+
+const poleMat = new THREE.MeshStandardMaterial({ color: 0x333d47, metalness: 0.5 });
+const pole = new THREE.Mesh(new THREE.CylinderGeometry(0.09, 0.09, 3.8, 8), poleMat);
+pole.position.set(-1.1, 1.9, CROSSWALK_Z - 2.5);
+scene.add(pole);
+
+const lightBox = new THREE.Mesh(new THREE.BoxGeometry(0.4, 1.0, 0.4), new THREE.MeshStandardMaterial({ color: 0x161c22 }));
+lightBox.position.set(-1.1, 3.4, CROSSWALK_Z - 2.5);
+scene.add(lightBox);
+
+function makeBulb(y, color) {
+  const b = new THREE.Mesh(new THREE.SphereGeometry(0.12, 12, 12), new THREE.MeshStandardMaterial({ color: 0x111111, emissive: color, emissiveIntensity: 0.15 }));
+  b.position.set(-1.1, y, CROSSWALK_Z - 2.28);
+  scene.add(b);
+  return b;
+}
+const bulbRed = makeBulb(3.7, 0xff3333);
+const bulbYellow = makeBulb(3.4, 0xffcc33);
+const bulbGreen = makeBulb(3.1, 0x33ff66);
+
+function updateTrafficLightVisual() {
+  bulbRed.material.emissiveIntensity = trafficLight.state === 'RED' ? 2.0 : 0.15;
+  bulbYellow.material.emissiveIntensity = trafficLight.state === 'YELLOW' ? 2.0 : 0.15;
+  bulbGreen.material.emissiveIntensity = trafficLight.state === 'GREEN' ? 2.0 : 0.15;
+}
+
+// Street Lamps along sidewalk
+for (let z = STREET_START + 10; z <= STREET_END; z += 25) {
+  const lampPole = new THREE.Mesh(new THREE.CylinderGeometry(0.06, 0.08, 4.2, 8), poleMat);
+  lampPole.position.set(-1.0, 2.1, z);
+  scene.add(lampPole);
+  const lampHead = new THREE.Mesh(new THREE.SphereGeometry(0.2, 8, 8), new THREE.MeshStandardMaterial({ color: 0xffffff, emissive: 0xffe0b2, emissiveIntensity: 0.8 }));
+  lampHead.position.set(-1.0, 4.2, z);
+  scene.add(lampHead);
+  const lLight = new THREE.PointLight(0xffe0b2, 0.5, 12);
+  lLight.position.set(-1.0, 4.0, z);
+  scene.add(lLight);
+}
+
+// --- CAR TRAFFIC SYSTEM ---
+const vehicles = [];
+
+function createVehicleMesh(type, bodyColor) {
+  const carGroup = new THREE.Group();
+  const mainMat = new THREE.MeshStandardMaterial({ color: bodyColor, roughness: 0.3, metalness: 0.4 });
+  const glassMat = new THREE.MeshStandardMaterial({ color: 0x112233, roughness: 0.1, metalness: 0.9 });
+  const wheelMat = new THREE.MeshStandardMaterial({ color: 0x151515, roughness: 0.9 });
+
+  let length = 3.8, width = 1.7, height = 1.3;
+  if (type === 'bus') { length = 8.0; width = 2.2; height = 2.6; }
+  else if (type === 'truck') { length = 5.2; width = 2.0; height = 2.1; }
+
+  // Body
+  const body = new THREE.Mesh(new THREE.BoxGeometry(width, height * 0.55, length), mainMat);
+  body.position.y = height * 0.35 + 0.2;
+  body.castShadow = true;
+  carGroup.add(body);
+
+  // Cabin / Roof
+  const cabinHeight = height * 0.45;
+  const cabin = new THREE.Mesh(new THREE.BoxGeometry(width * 0.9, cabinHeight, length * 0.55), glassMat);
+  cabin.position.set(0, height * 0.7, -length * 0.05);
+  cabin.castShadow = true;
+  carGroup.add(cabin);
+
+  // Wheels
+  const wheels = [];
+  const wheelRadius = 0.3;
+  const wheelPositions = [
+    [-width / 2 - 0.05, wheelRadius, length / 3],
+    [width / 2 + 0.05, wheelRadius, length / 3],
+    [-width / 2 - 0.05, wheelRadius, -length / 3],
+    [width / 2 + 0.05, wheelRadius, -length / 3],
+  ];
+
+  wheelPositions.forEach(pos => {
+    const wheel = new THREE.Mesh(new THREE.CylinderGeometry(wheelRadius, wheelRadius, 0.22, 12), wheelMat);
+    wheel.rotation.z = Math.PI / 2;
+    wheel.position.set(pos[0], pos[1], pos[2]);
+    carGroup.add(wheel);
+    wheels.push(wheel);
+  });
+
+  // Headlights
+  const lightMat = new THREE.MeshStandardMaterial({ color: 0xffffcc, emissive: 0xffffcc, emissiveIntensity: 1.5 });
+  const headlightL = new THREE.Mesh(new THREE.BoxGeometry(0.3, 0.15, 0.1), lightMat);
+  headlightL.position.set(-width * 0.35, height * 0.35, length / 2 + 0.02);
+  const headlightR = headlightL.clone();
+  headlightR.position.x = width * 0.35;
+  carGroup.add(headlightL);
+  carGroup.add(headlightR);
+
+  // Taillights
+  const tailMat = new THREE.MeshStandardMaterial({ color: 0xff2222, emissive: 0xff2222, emissiveIntensity: 1.2 });
+  const taillightL = new THREE.Mesh(new THREE.BoxGeometry(0.3, 0.15, 0.1), tailMat);
+  taillightL.position.set(-width * 0.35, height * 0.35, -length / 2 - 0.02);
+  const taillightR = taillightL.clone();
+  taillightR.position.x = width * 0.35;
+  carGroup.add(taillightL);
+  carGroup.add(taillightR);
+
+  return { mesh: carGroup, wheels: wheels, length: length };
+}
+
+// Spawn Vehicles on 2 Lanes
+// Lane 1: Inner Lane (X = 1.8), moving direction +Z (South to North)
+// Lane 2: Outer Lane (X = 5.2), moving direction -Z (North to South)
+const carConfigs = [
+  { lane: 1, type: 'car', color: 0xe74c3c, z: -10, speed: 10 },
+  { lane: 1, type: 'taxi', color: 0xf1c40f, z: 30, speed: 11 },
+  { lane: 1, type: 'bus', color: 0x2980b9, z: 70, speed: 8 },
+  { lane: 2, type: 'car', color: 0x9b59b6, z: 120, speed: -10 },
+  { lane: 2, type: 'truck', color: 0x34495e, z: 80, speed: -9 },
+  { lane: 2, type: 'car', color: 0x2ecc71, z: 20, speed: -11 }
+];
+
+carConfigs.forEach(cfg => {
+  const vData = createVehicleMesh(cfg.type, cfg.color);
+  const xPos = cfg.lane === 1 ? 1.8 : 5.2;
+  vData.mesh.position.set(xPos, 0, cfg.z);
+  
+  // Rotate lane 2 cars to face -Z direction
+  if (cfg.lane === 2) {
+    vData.mesh.rotation.y = Math.PI;
+  }
+  
+  scene.add(vData.mesh);
+  vehicles.push({
+    mesh: vData.mesh,
+    wheels: vData.wheels,
+    lane: cfg.lane,
+    baseSpeed: cfg.speed,
+    currentSpeed: cfg.speed,
+    length: vData.length,
+    x: xPos
+  });
+});
+
+// --- PUPPER V3 GUIDE DOG MODEL ---
+const pupper = new THREE.Group();
+const bodyMat = new THREE.MeshStandardMaterial({ color: 0x2a3645, roughness: 0.5 });
+const accentMat = new THREE.MeshStandardMaterial({ color: 0x34d0b6, emissive: 0x0f3d36, emissiveIntensity: 0.4 });
+const legMat = new THREE.MeshStandardMaterial({ color: 0x18202a });
+
+const torsoGroup = new THREE.Group();
+const dogBody = new THREE.Mesh(new THREE.BoxGeometry(0.36, 0.22, 0.65), bodyMat);
+dogBody.position.y = 0.32;
+dogBody.castShadow = true;
+torsoGroup.add(dogBody);
+
+const dogHead = new THREE.Mesh(new THREE.BoxGeometry(0.22, 0.18, 0.22), bodyMat);
+dogHead.position.set(0, 0.42, 0.35);
+dogHead.castShadow = true;
+torsoGroup.add(dogHead);
+
+// AI Vision Cone
+const cameraFrustum = new THREE.Mesh(
+  new THREE.ConeGeometry(0.38, 1.1, 4, 1, true),
+  new THREE.MeshBasicMaterial({ color: 0x34d0b6, transparent: true, opacity: 0.2, side: THREE.DoubleSide })
+);
+cameraFrustum.rotation.x = -Math.PI / 2.3;
+cameraFrustum.position.set(0, 0.65, 0.75);
+torsoGroup.add(cameraFrustum);
+
+// Leash Handle
+const leashHandle = new THREE.Mesh(new THREE.TorusGeometry(0.09, 0.02, 8, 16), accentMat);
+leashHandle.rotation.x = Math.PI / 2;
+leashHandle.position.set(0, 0.48, -0.12);
+torsoGroup.add(leashHandle);
+
+// Legs Animation Rig
+const legs = [];
+const legOffsets = [[0.16, 0.24], [-0.16, 0.24], [0.16, -0.24], [-0.16, -0.24]];
+legOffsets.forEach((off, i) => {
+  const hip = new THREE.Group();
+  hip.position.set(off[0], 0.22, off[1]);
+  const thigh = new THREE.Mesh(new THREE.BoxGeometry(0.07, 0.22, 0.07), legMat);
+  thigh.position.y = -0.11;
+  hip.add(thigh);
+  torsoGroup.add(hip);
+  legs.push({ hip: hip, phase: (i === 0 || i === 3) ? 0 : Math.PI });
+});
+
+pupper.add(torsoGroup);
+pupper.position.set(SIDEWALK_X, 0.05, 0);
+scene.add(pupper);
+
+// Sensor Raycasters
+const raycaster = new THREE.Raycaster();
+function makeRayLine(color) {
+  const geo = new THREE.BufferGeometry().setFromPoints([new THREE.Vector3(), new THREE.Vector3()]);
+  const mat = new THREE.LineBasicMaterial({ color: color, linewidth: 2 });
+  const line = new THREE.Line(geo, mat);
+  scene.add(line);
+  return line;
+}
+const rayForwardLine = makeRayLine(0x34d0b6);
+const rayDownLine = makeRayLine(0x34d0b6);
+
+// --- STATE MANAGEMENT & TELEMETRY ---
+let currentState = 'IDLE';
+let activeTargetKey = null;
+let manualControl = false;
+const MOVE_SPEED = 2.6;
+
+const telemetry = {
+  totalDistance: 0.0,
+  lastPos: pupper.position.clone(),
+  accumulatedDeviation: 0.0,
+  stepCount: 0,
+  smoothnessScore: 100,
+  logs: []
+};
+
+function logBt(msg) {
+  const panel = document.getElementById('btLog');
+  const row = document.createElement('div');
+  row.textContent = '· ' + msg;
+  panel.insertBefore(row, panel.firstChild);
+  while (panel.children.length > 7) { panel.removeChild(panel.lastChild); }
+  telemetry.logs.push(`[${new Date().toLocaleTimeString()}] ${msg}`);
+}
+
+// Keyboard Listeners
+const keys = {};
+window.addEventListener('keydown', e => { keys[e.key.toLowerCase()] = true; });
+window.addEventListener('keyup', e => { keys[e.key.toLowerCase()] = false; });
+
+// Store Navigation Button Selection
+document.querySelectorAll('.store-btn').forEach(btn => {
+  btn.addEventListener('click', e => {
+    document.querySelectorAll('.store-btn').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+    activeTargetKey = btn.dataset.target;
+    manualControl = false;
+    currentState = 'NAVIGATING'; // 解除 ARRIVED 鎖定，重新啟用動態導航
+    document.getElementById('arrivalCard').style.display = 'none'; // 隱藏抵達提示框
+    document.getElementById('btnManual').classList.remove('active');
+    document.getElementById('mTarget').textContent = STORES[activeTargetKey].name;
+    logBt(`設定目的地：「${STORES[activeTargetKey].name}」，開始導航！`);
+  });
+});
+
+// HUD Button Events
+document.getElementById('btnRed').addEventListener('click', () => {
+  trafficLight.state = trafficLight.state === 'RED' ? 'GREEN' : 'RED';
+  trafficLight.manualOverrideUntil = performance.now() + 8000;
+  logBt(trafficLight.state === 'RED' ? '手動設定斑馬線紅燈 (等候車流)' : '手動設定斑馬線綠燈 (行人通行)');
+});
+
+let activeTreeObstacle = null;
+document.getElementById('btnBranch').addEventListener('click', () => {
+  if (activeTreeObstacle) scene.remove(activeTreeObstacle);
+  const zObs = pupper.position.z + 3.0;
+  activeTreeObstacle = new THREE.Mesh(new THREE.CylinderGeometry(0.06, 0.08, 1.8, 6), new THREE.MeshStandardMaterial({ color: 0x5a3d24 }));
+  activeTreeObstacle.position.set(SIDEWALK_X, 1.15, zObs);
+  activeTreeObstacle.rotation.z = Math.PI / 2.2;
+  scene.add(activeTreeObstacle);
+  logBt(`前方產生懸空樹枝障礙 (Z=${zObs.toFixed(1)})`);
+});
+
+document.getElementById('btnManual').addEventListener('click', e => {
+  manualControl = !manualControl;
+  e.target.classList.toggle('active', manualControl);
+  if (manualControl) {
+    activeTargetKey = null;
+    document.querySelectorAll('.store-btn').forEach(b => b.classList.remove('active'));
+    document.getElementById('mTarget').textContent = 'WASD 手動';
+  }
+  logBt(manualControl ? '切換為 WASD 手動操控' : '切回自主導航模式');
+});
+
+let birdView = false;
+document.getElementById('btnCamera').addEventListener('click', () => {
+  birdView = !birdView;
+  orbitControls.enabled = birdView;
+  if (birdView) {
+    camera.position.set(-3, 30, pupper.position.z + 15);
+    orbitControls.target.set(-3, 0, pupper.position.z + 15);
+  }
+  logBt(birdView ? '切換為鳥瞰視角' : '切換為隨狗視角');
+});
+
+document.getElementById('btnReset').addEventListener('click', () => {
+  pupper.position.set(SIDEWALK_X, 0.05, 0);
+  pupper.rotation.set(0, 0, 0);
+  activeTargetKey = null;
+  manualControl = false;
+  document.querySelectorAll('.store-btn').forEach(b => b.classList.remove('active'));
+  document.getElementById('btnManual').classList.remove('active');
+  document.getElementById('mTarget').textContent = '未選擇';
+  if (activeTreeObstacle) { scene.remove(activeTreeObstacle); activeTreeObstacle = null; }
+  telemetry.totalDistance = 0.0;
+  telemetry.stepCount = 0;
+  currentState = 'IDLE';
+  logBt('位置與導航數據已成功重置');
+});
+
+document.getElementById('btnCloseArrival').addEventListener('click', () => {
+  document.getElementById('arrivalCard').style.display = 'none';
+  if (currentState === 'ARRIVED') {
+    currentState = 'IDLE';
+  }
+});
+
+// --- MAIN SIMULATION LOGIC ---
+const clock = new THREE.Clock();
+let gaitTime = 0;
+
+function updateVehicles(delta) {
+  // Traffic stop lines when Pedestrian Light is GREEN (Cars Red)
+  const carMustStopForCrosswalk = (trafficLight.state === 'GREEN');
+  
+  vehicles.forEach(v => {
+    let speed = v.baseSpeed;
+    const posZ = v.mesh.position.z;
+
+    // Check stop line at crosswalk (Z=45)
+    if (carMustStopForCrosswalk) {
+      if (v.lane === 1 && posZ >= 33.0 && posZ < 43.0) { speed = 0; }
+      else if (v.lane === 2 && posZ <= 57.0 && posZ > 47.0) { speed = 0; }
+    }
+
+    // Accelerate/Decelerate smoothly
+    v.currentSpeed += (speed - v.currentSpeed) * Math.min(1.0, delta * 4.0);
+    v.mesh.position.z += v.currentSpeed * delta;
+
+    // Rotate wheels based on motion
+    v.wheels.forEach(w => w.rotation.x += (v.currentSpeed * delta) / 0.3);
+
+    // Loop vehicles back around street ends
+    if (v.lane === 1 && v.mesh.position.z > STREET_END) { v.mesh.position.z = STREET_START; }
+    if (v.lane === 2 && v.mesh.position.z < STREET_START) { v.mesh.position.z = STREET_END; }
+  });
+}
+
+function updateNavigation(delta) {
+  const posZ = pupper.position.z;
+  const posX = pupper.position.x;
+
+  // Rays
+  const forwardDir = new THREE.Vector3(0, 0, 1).applyQuaternion(pupper.quaternion);
+  const sensorFrontPos = pupper.position.clone().add(new THREE.Vector3(0, 0.25, 0)).add(forwardDir.clone().multiplyScalar(0.2));
+  raycaster.set(sensorFrontPos, forwardDir);
+  const forwardHits = raycaster.intersectObjects([pole], false);
+  const forwardDist = forwardHits.length ? forwardHits[0].distance : 5.0;
+
+  const downOrigin = pupper.position.clone().add(forwardDir.clone().multiplyScalar(0.2)).add(new THREE.Vector3(0, 0.2, 0));
+  raycaster.set(downOrigin, new THREE.Vector3(0, -1, 0));
+  const groundHits = raycaster.intersectObjects(WALKABLE_SURFACES, false);
+  const downDist = groundHits.length ? groundHits[0].distance : 3.0;
+
+  // Crosswalk & Overhead checks
+  const isApproachingCrosswalk = (posZ >= 40.0 && posZ < 43.5);
+  const isRedLightBlocking = isApproachingCrosswalk && (trafficLight.state === 'RED');
+  
+  let isOverheadAhead = false;
+  if (activeTreeObstacle && Math.abs(posZ - activeTreeObstacle.position.z) < 1.8) {
+    isOverheadAhead = true;
+  }
+
+  // State Updates
+  let nextState = 'IDLE';
+  if (isRedLightBlocking) { nextState = 'WAIT_RED_LIGHT'; }
+  else if (isOverheadAhead) { nextState = 'OBSTACLE_AVOID'; }
+  else if (manualControl) { nextState = 'NAVIGATING'; }
+  else if (activeTargetKey) {
+    const targetStore = STORES[activeTargetKey];
+    const distToTarget = Math.abs(posZ - targetStore.z);
+
+    if (distToTarget < 0.6 && Math.abs(posX - targetStore.targetX) < 0.5) {
+      nextState = 'ARRIVED';
+      if (currentState !== 'ARRIVED') {
+        document.getElementById('arrivalTitle').textContent = `🎉 平安抵達 ${targetStore.name}！`;
+        document.getElementById('arrivalDesc').textContent = `Pupper V3 導盲犬已順利引導您到達 ${targetStore.name} 前門處。`;
+        document.getElementById('arrivalCard').style.display = 'block';
+        logBt(`抵達目的地：${targetStore.name}`);
+      }
+    } else {
+      nextState = 'NAVIGATING';
+    }
+  }
+
+  // 允許狀態順暢切換，消除死機現象
+  if (nextState !== currentState) {
+    currentState = nextState;
+    logBt('導航狀態 → ' + currentState);
+  }
+
+  let moving = false;
+
+  // Movement execution
+  if (manualControl) {
+    if (keys['a']) pupper.position.x -= 1.6 * delta;
+    if (keys['d']) pupper.position.x += 1.6 * delta;
+    if (keys['w']) { pupper.position.z += MOVE_SPEED * delta; moving = true; }
+  } else if (currentState === 'NAVIGATING' || currentState === 'OBSTACLE_AVOID') {
+    let desiredX = SIDEWALK_X;
+    let desiredZ = posZ;
+
+    if (activeTargetKey) {
+      const t = STORES[activeTargetKey];
+      // 當靠近目標商店時切換至店家門口 X 座標，否則維持人行道中央
+      if (Math.abs(posZ - t.z) < 2.5) {
+        desiredX = t.targetX;
+      }
+      desiredZ = t.z;
+    }
+
+    if (isOverheadAhead) { desiredX = SIDEWALK_X - 0.9; } // 避開懸空樹枝
+
+    const deltaZ = desiredZ - posZ;
+    const deltaX = desiredX - posX;
+
+    // 前後雙向移動與抵達判斷
+    if (Math.abs(deltaZ) > 0.25 || Math.abs(deltaX) > 0.25) {
+      if (Math.abs(deltaZ) > 0.25) {
+        pupper.position.z += Math.sign(deltaZ) * MOVE_SPEED * delta;
+      }
+      moving = true;
+    }
+
+    // X 軸平滑移動
+    pupper.position.x += deltaX * Math.min(1.0, delta * 3.0);
+
+    // 支援 360 度迴轉角度計算 (前往前方或身後的商店)
+    const targetAngle = Math.atan2(deltaX, deltaZ);
+    let angleDiff = targetAngle - pupper.rotation.y;
+    
+    // 平滑處理角度跨越 (-PI 到 PI)
+    while (angleDiff < -Math.PI) angleDiff += Math.PI * 2;
+    while (angleDiff > Math.PI) angleDiff -= Math.PI * 2;
+    
+    pupper.rotation.y += angleDiff * Math.min(1.0, delta * 6.0);
+  } else {
+    // 待機時緩慢歸零轉角
+    pupper.rotation.y += (0 - pupper.rotation.y) * Math.min(1.0, delta * 4.0);
+  }
+
+  // Sidewalk bounds clamp
+  pupper.position.x = Math.max(-4.5, Math.min(-1.2, pupper.position.x));
+
+  // Telemetry updates
+  if (moving) {
+    const stepDist = pupper.position.distanceTo(telemetry.lastPos);
+    telemetry.totalDistance += stepDist;
+    telemetry.stepCount++;
+    telemetry.lastPos.copy(pupper.position);
+  }
+
+  // Dog Legs Walking Animation
+  if (moving) { gaitTime += delta * 9; } else { gaitTime += (0 - gaitTime) * 0.1; }
+  legs.forEach(leg => {
+    leg.hip.rotation.x = moving ? Math.sin(gaitTime + leg.phase) * 0.5 : 0;
+  });
+  torsoGroup.position.y = moving ? Math.abs(Math.sin(gaitTime * 2)) * 0.025 : 0;
+
+  // Update Line Visualizations
+  function setLine(line, from, to, color) {
+    const pos = line.geometry.attributes.position;
+    pos.setXYZ(0, from.x, from.y, from.z);
+    pos.setXYZ(1, to.x, to.y, to.z);
+    pos.needsUpdate = true;
+    line.material.color.set(color);
+  }
+  setLine(rayForwardLine, sensorFrontPos, sensorFrontPos.clone().add(forwardDir.clone().multiplyScalar(forwardDist)), forwardDist < 1.2 ? 0xe85252 : 0x34d0b6);
+  setLine(rayDownLine, downOrigin, downOrigin.clone().add(new THREE.Vector3(0, -downDist, 0)), 0x34d0b6);
+
+  return { forwardDist, downDist, isRedLightBlocking, isOverheadAhead };
+}
+
+function updateHUD(info) {
+  const badge = document.getElementById('stateBadge');
+  badge.textContent = currentState;
+  badge.style.borderColor = currentState === 'NAVIGATING' ? '#34d0b6' : (currentState === 'WAIT_RED_LIGHT' ? '#f5a623' : '#32445a');
+  badge.style.color = currentState === 'NAVIGATING' ? '#34d0b6' : (currentState === 'WAIT_RED_LIGHT' ? '#f5a623' : '#8fa0b4');
+
+  document.getElementById('valForward').textContent = info.forwardDist.toFixed(2) + ' m';
+  document.getElementById('valDown').textContent = info.downDist.toFixed(2) + ' m';
+  document.getElementById('valUp').textContent = info.isOverheadAhead ? '發現懸空樹枝！' : '正常';
+  document.getElementById('valLight').textContent = trafficLight.state === 'GREEN' ? '綠燈 (安全過街)' : '紅燈 (停等車流)';
+
+  document.getElementById('mDist').textContent = telemetry.totalDistance.toFixed(1) + ' m';
+  
+  if (activeTargetKey) {
+    const targetZ = STORES[activeTargetKey].z;
+    const remain = Math.max(0, Math.abs(pupper.position.z - targetZ)).toFixed(1);
+    document.getElementById('mTargetDist').textContent = remain + ' m';
+  } else {
+    document.getElementById('mTargetDist').textContent = '-- m';
+  }
+
+  // Haptic Pull Arrow
+  const arrow = document.getElementById('pullArrow');
+  const vibeFill = document.getElementById('vibeBarFill');
+  const pullLabel = document.getElementById('pullLabel');
+
+  if (currentState === 'OBSTACLE_AVOID') {
+    arrow.style.transform = 'rotate(-35deg)';
+    vibeFill.style.width = '85%';
+    vibeFill.style.background = '#e8735d';
+    pullLabel.textContent = '牽繩向左避障引導';
+  } else if (currentState === 'WAIT_RED_LIGHT') {
+    arrow.style.transform = 'rotate(0deg)';
+    vibeFill.style.width = '40%';
+    vibeFill.style.background = '#f5a623';
+    pullLabel.textContent = '輕微脈衝（停等紅燈）';
+  } else if (currentState === 'NAVIGATING') {
+    arrow.style.transform = 'rotate(0deg)';
+    vibeFill.style.width = '15%';
+    vibeFill.style.background = '#34d0b6';
+    pullLabel.textContent = '穩定前行引導';
+  } else {
+    arrow.style.transform = 'rotate(0deg)';
+    vibeFill.style.width = '0%';
+    pullLabel.textContent = '待機中';
+  }
+}
+
+function updateCamera(delta) {
+  if (birdView) {
+    orbitControls.update();
+    return;
+  }
+  const desired = pupper.position.clone().add(new THREE.Vector3(0, 2.5, -4.8));
+  camera.position.lerp(desired, Math.min(1, delta * 5));
+  camera.lookAt(pupper.position.clone().add(new THREE.Vector3(0, 0.4, 1.8)));
+}
+
+function animate() {
+  requestAnimationFrame(animate);
+  const delta = Math.min(clock.getDelta(), 0.1);
+
+  // Automatic traffic light cycle when no manual override
+  if (performance.now() > trafficLight.manualOverrideUntil) {
+    trafficLight.autoTimer += delta;
+    const cycle = trafficLight.autoTimer % 12;
+    trafficLight.state = cycle < 6 ? 'GREEN' : (cycle < 7 ? 'YELLOW' : 'RED');
+  }
+  updateTrafficLightVisual();
+
+  updateVehicles(delta);
+  const navInfo = updateNavigation(delta);
+  updateCamera(delta);
+  updateHUD(navInfo);
+
+  renderer.render(scene, camera);
+}
+animate();
+
+window.addEventListener('resize', () => {
+  camera.aspect = window.innerWidth / window.innerHeight;
+  camera.updateProjectionMatrix();
+  renderer.setSize(window.innerWidth, window.innerHeight);
+});
+
+logBt('街道與雙向車流模擬器已就緒！請選擇頂部商店開啟導航。');
+</script>
+</body>
+</html>
