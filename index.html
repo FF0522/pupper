@@ -1,248 +1,202 @@
 <!DOCTYPE html>
-<html lang="zh-Hant">
+<html lang="zh-TW">
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Pupper V3 智慧導盲犬 · 動態街道與多商店 3D 模擬器</title>
-<script src="https://unpkg.com/three@0.128.0/build/three.min.js"></script>
-<script src="https://unpkg.com/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
-<style>
-  :root {
-    --panel: rgba(18, 25, 35, 0.88);
-    --line: #2e3e52;
-    --text: #e7ecf2;
-    --dim: #8fa0b4;
-    --teal: #34d0b6;
-    --amber: #f5a623;
-    --coral: #e8735d;
-    --red: #e85252;
-    --purple: #9b8cf2;
-    --blue: #4a90e2;
-  }
-  html, body {
-    margin: 0;
-    padding: 0;
-    overflow: hidden;
-    background: #090e14;
-    font-family: 'Segoe UI', -apple-system, BlinkMacSystemFont, sans-serif;
-  }
-  #canvasHolder {
-    position: fixed;
-    inset: 0;
-  }
-  #canvasHolder canvas {
-    display: block;
-  }
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>GuidPaw</title>
+  <!-- Tailwind CSS -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <!-- Three.js & OrbitControls -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
+  
+  <style>
+    :root {
+      --bg: #0b1118;
+      --panel-bg: rgba(18, 26, 36, 0.88);
+      --line: rgba(52, 208, 182, 0.25);
+      --teal: #34d0b6;
+      --amber: #f5a623;
+      --red: #e74c3c;
+      --text: #e1e7ed;
+      --muted: #7f93a4;
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; user-select: none; }
+    body {
+      background: var(--bg);
+      color: var(--text);
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+      overflow: hidden;
+      width: 100vw;
+      height: 100vh;
+    }
+    #canvasHolder {
+      position: absolute;
+      inset: 0;
+      z-index: 1;
+    }
+    .hud {
+      position: absolute;
+      z-index: 10;
+      pointer-events: auto;
+    }
+    .panel {
+      background: var(--panel-bg);
+      backdrop-filter: blur(12px);
+      border: 1px solid var(--line);
+      border-radius: 12px;
+      padding: 12px 16px;
+      box-shadow: 0 8px 32px rgba(0, 0, 0, 0.4);
+    }
+    
+    /* HUD Layout Positions */
+    #mapContainer { top: 16px; left: 16px; width: 230px; }
+    #mapHeader { display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; }
+    #mapHeader h1 { font-size: 15px; font-weight: 800; color: var(--teal); letter-spacing: 0.5px; }
+    #stateBadge {
+      font-size: 10px; font-weight: 800; padding: 2px 8px; border-radius: 12px;
+      background: rgba(52, 208, 182, 0.15); color: var(--teal); border: 1px solid var(--teal);
+    }
+    #minimapCanvas {
+      width: 100%; height: 160px; background: rgba(10, 16, 23, 0.9);
+      border-radius: 8px; border: 1px solid rgba(255, 255, 255, 0.08); display: block;
+    }
+    .map-legend { display: flex; justify-content: space-between; margin-top: 6px; font-size: 10px; color: var(--muted); }
+    .dot-legend { display: inline-block; width: 6px; height: 6px; border-radius: 50%; margin-right: 4px; }
 
-  /* HUD Styling */
-  .hud {
-    position: fixed;
-    color: var(--text);
-    z-index: 10;
-    user-select: none;
-  }
-  .panel {
-    background: var(--panel);
-    border: 1px solid var(--line);
-    border-radius: 8px;
-    backdrop-filter: blur(8px);
-    padding: 10px 14px;
-    box-shadow: 0 4px 20px rgba(0,0,0,0.4);
-  }
+    #storePanel { top: 16px; left: 260px; display: flex; gap: 8px; flex-wrap: wrap; max-width: calc(100vw - 580px); }
+    .store-btn {
+      background: rgba(23, 35, 50, 0.85); border: 1px solid rgba(255,255,255,0.12);
+      color: var(--text); padding: 6px 12px; border-radius: 8px; font-size: 12px;
+      cursor: pointer; transition: all 0.2s ease; display: flex; align-items: center; gap: 6px;
+    }
+    .store-btn:hover { background: rgba(52, 208, 182, 0.2); border-color: var(--teal); color: #fff; }
+    .store-btn.active { background: var(--teal); color: #0b1118; font-weight: bold; border-color: var(--teal); }
 
-  /* Top-Left Combined Map & Title Container */
-  #mapContainer {
-    top: 14px;
-    left: 14px;
-    width: 210px;
-    display: flex;
-    flex-direction: column;
-    gap: 8px;
-  }
-  #mapHeader {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-  }
-  #mapHeader h1 {
-    font-size: 13px;
-    font-weight: 700;
-    margin: 0;
-    letter-spacing: 0.5px;
-    color: var(--text);
-  }
-  #stateBadge {
-    font-family: monospace;
-    font-size: 10px;
-    font-weight: 700;
-    padding: 2px 6px;
-    border-radius: 4px;
-    border: 1px solid var(--line);
-    letter-spacing: 0.5px;
-    transition: all 0.25s ease;
-  }
-  #minimapCanvas {
-    width: 100%;
-    height: 180px;
-    background: #0d1520;
-    border: 1px solid #233448;
-    border-radius: 6px;
-    display: block;
-  }
-  .map-legend {
-    display: flex;
-    justify-content: space-around;
-    font-size: 10px;
-    color: var(--dim);
-    font-family: monospace;
-    padding-top: 2px;
-  }
-  .map-legend span { display: flex; align-items: center; gap: 4px; }
-  .dot-legend { width: 6px; height: 6px; border-radius: 50%; display: inline-block; }
+    #sensorPanel { top: 16px; right: 16px; width: 280px; }
+    #sensorPanel h2 { font-size: 12px; color: var(--muted); margin-bottom: 8px; font-weight: 600; text-transform: uppercase; }
+    .row { display: flex; justify-content: space-between; margin-bottom: 6px; font-size: 12px; }
+    .row .v { font-weight: 700; color: #fff; }
+    .dot { display: inline-block; width: 8px; height: 8px; border-radius: 50%; margin-right: 6px; }
 
-  /* Store Selector Panel */
-  #storePanel {
-    top: 14px; left: 50%; transform: translateX(-50%);
-    display: flex; gap: 6px; flex-wrap: wrap; justify-content: center;
-    max-width: 80vw;
-  }
-  .store-btn {
-    font-size: 12px;
-    font-weight: 600;
-    background: #182332;
-    border: 1px solid #32445a;
-    border-radius: 6px;
-    color: var(--text);
-    padding: 7px 12px;
-    cursor: pointer;
-    transition: all 0.2s ease;
-    display: flex;
-    align-items: center;
-    gap: 5px;
-  }
-  .store-btn:hover { background: #23344a; border-color: var(--teal); color: var(--teal); }
-  .store-btn.active { background: #0f3d36; border-color: var(--teal); color: var(--teal); box-shadow: 0 0 8px rgba(52,208,182,0.4); }
+    #telemetryPanel { bottom: 70px; right: 16px; width: 280px; }
+    .pull-indicator {
+      margin-top: 8px; padding: 10px; background: rgba(0,0,0,0.3); border-radius: 8px; text-align: center;
+    }
+    .arrow { font-size: 20px; color: var(--teal); transition: transform 0.3s ease; }
+    .vibe-bar { height: 4px; background: rgba(255,255,255,0.1); border-radius: 2px; margin-top: 6px; overflow: hidden; }
+    .vibe-fill { height: 100%; width: 0%; background: var(--teal); transition: width 0.3s ease; }
 
-  /* Sensor HUD */
-  #sensorPanel { top: 285px; left: 14px; width: 210px; font-size: 11px; font-family: monospace; }
-  #sensorPanel .row { display: flex; justify-content: space-between; padding: 3px 0; color: var(--dim); }
-  #sensorPanel .row span.v { color: var(--text); font-weight: 600; }
-  #sensorPanel .dot { display: inline-block; width: 6px; height: 6px; border-radius: 50%; margin-right: 5px; }
+    #btPanel { bottom: 70px; left: 16px; width: 320px; max-height: 180px; display: flex; flex-direction: column; }
+    #btLog { font-family: monospace; font-size: 11px; color: #a0aec0; overflow-y: auto; height: 110px; display: flex; flex-direction: column-reverse; }
 
-  /* Telemetry Panel */
-  #telemetryPanel { top: 70px; right: 14px; width: 230px; font-size: 11px; font-family: monospace; }
-  #telemetryPanel h3 { font-size: 11px; text-transform: uppercase; letter-spacing: 0.6px; color: var(--teal); margin: 0 0 8px; font-weight: 700; display: flex; justify-content: space-between; }
-  #telemetryPanel .metric { display: flex; justify-content: space-between; padding: 3px 0; border-bottom: 1px solid #1a2736; }
-  #telemetryPanel .metric-val { font-weight: bold; color: #ffffff; }
+    #bottomBar { bottom: 16px; left: 50%; transform: translateX(-50%); display: flex; gap: 8px; flex-wrap: wrap; max-width: 92vw; justify-content: center; }
+    button {
+      font-family: inherit; font-size: 12px; color: var(--text); background: #172332; border: 1px solid var(--line);
+      border-radius: 8px; padding: 8px 14px; cursor: pointer; white-space: nowrap; transition: all 0.15s ease;
+    }
+    button:hover { background: #223247; border-color: #55708a; }
+    button:active { transform: scale(0.96); }
+    button.danger { background: #4a1414; border-color: var(--red); color: #ff9999; }
+    button.active { background: #0f3d36; border-color: var(--teal); color: var(--teal); }
 
-  /* Haptic & Event Panel */
-  #hapticPanel { top: 260px; right: 14px; width: 230px; }
-  #hapticPanel h3 { font-size: 11px; text-transform: uppercase; letter-spacing: 0.6px; color: var(--dim); margin: 0 0 8px; font-weight: 600; }
-  #pullArrowWrap { display: flex; align-items: center; gap: 8px; margin-bottom: 6px; }
-  #pullArrow { width: 22px; height: 22px; transition: transform 0.3s ease; }
-  #pullLabel { font-size: 11px; color: var(--dim); }
-  #vibeBarBg { width: 100%; height: 5px; background: #1c2836; border-radius: 3px; overflow: hidden; margin-bottom: 8px; }
-  #vibeBarFill { height: 100%; width: 0%; background: var(--teal); transition: width 0.25s ease, background 0.25s ease; }
-  #btLog { font-size: 10px; font-family: monospace; color: var(--dim); max-height: 85px; overflow-y: auto; border-top: 1px solid var(--line); padding-top: 6px; }
-  #btLog div { padding: 2px 0; }
+    #guideAlertToast {
+      position: fixed; top: 70px; left: 50%; transform: translateX(-50%) translateY(-20px);
+      background: rgba(26, 36, 50, 0.95); border: 2px solid var(--amber); border-radius: 30px;
+      padding: 10px 24px; display: flex; align-items: center; gap: 12px; z-index: 90;
+      opacity: 0; pointer-events: none; transition: all 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+      box-shadow: 0 8px 24px rgba(0, 0, 0, 0.6);
+    }
+    #guideAlertToast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+    #guideAlertToast .icon { font-size: 20px; }
+    #guideAlertToast .msg { font-size: 13px; font-weight: bold; color: var(--text); letter-spacing: 0.5px; }
 
-  /* Bottom Controls */
-  #bottomBar { bottom: 14px; left: 50%; transform: translateX(-50%); display: flex; gap: 8px; flex-wrap: wrap; max-width: 90vw; justify-content: center; }
-  button {
-    font-family: inherit; font-size: 12px; color: var(--text); background: #172332; border: 1px solid var(--line);
-    border-radius: 6px; padding: 8px 12px; cursor: pointer; white-space: nowrap; transition: all 0.15s ease;
-  }
-  button:hover { background: #223247; border-color: #55708a; }
-  button:active { transform: scale(0.96); }
-  button.danger { background: #4a1414; border-color: var(--red); color: #ff9999; }
-  button.active { background: #0f3d36; border-color: var(--teal); color: var(--teal); }
-
-  /* Destination Arrival Overlay Card */
-  #arrivalCard {
-    display: none;
-    position: fixed;
-    top: 50%; left: 50%;
-    transform: translate(-50%, -50%);
-    background: rgba(15, 23, 34, 0.95);
-    border: 2px solid var(--teal);
-    border-radius: 12px;
-    padding: 22px 30px;
-    text-align: center;
-    z-index: 100;
-    box-shadow: 0 10px 30px rgba(52,208,182,0.3);
-    animation: popIn 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
-  }
-  @keyframes popIn { 0% { transform: translate(-50%, -40%) scale(0.8); opacity: 0; } 100% { transform: translate(-50%, -50%) scale(1); opacity: 1; } }
-  #arrivalCard h2 { margin: 0 0 8px; color: var(--teal); font-size: 20px; }
-  #arrivalCard p { margin: 0 0 18px; font-size: 14px; color: var(--dim); }
-  #arrivalCard button { background: var(--teal); color: #000; font-weight: bold; padding: 9px 24px; border: none; border-radius: 6px; cursor: pointer; }
-</style>
+    #arrivalCard {
+      position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%);
+      width: 340px; background: rgba(18, 26, 36, 0.96); border: 2px solid var(--teal);
+      border-radius: 16px; padding: 24px; text-align: center; z-index: 100; display: none;
+      box-shadow: 0 12px 40px rgba(0,0,0,0.8); backdrop-filter: blur(16px);
+    }
+    #arrivalCard h3 { color: var(--teal); font-size: 18px; margin-bottom: 8px; }
+    #arrivalCard p { font-size: 13px; color: var(--muted); margin-bottom: 16px; }
+  </style>
 </head>
 <body>
 
 <div id="canvasHolder"></div>
 
-<!-- Top-Left Combined Mini-Map & Title HUD -->
+<!-- Top-Left Mini-Map & Title HUD -->
 <div class="hud panel" id="mapContainer">
   <div id="mapHeader">
-    <h1>🐕 Pupper 實時導航</h1>
+    <h1>🐕 GuidPaw 實時導航</h1>
     <span id="stateBadge">IDLE</span>
   </div>
-  <canvas id="minimapCanvas" width="200" height="180"></canvas>
+  <canvas id="minimapCanvas" width="200" height="160"></canvas>
   <div class="map-legend">
-    <span><i class="dot-legend" style="background:#34d0b6"></i>導盲犬</span>
-    <span><i class="dot-legend" style="background:#f5a623"></i>商店</span>
+    <span><i class="dot-legend" style="background:#34d0b6"></i>GuidPaw</span>
+    <span><i class="dot-legend" style="background:#f5a623"></i>目的地</span>
+    <span><i class="dot-legend" style="background:#9b8cf2"></i>陸橋階梯</span>
     <span><i class="dot-legend" style="background:#e74c3c"></i>車輛</span>
   </div>
 </div>
 
+<!-- Target Store Navigation Selection -->
 <div class="hud" id="storePanel">
   <button class="store-btn" data-target="cafe">☕ 暖陽咖啡館</button>
   <button class="store-btn" data-target="bakery">🍞 麥香烘焙坊</button>
+  <button class="store-btn" data-target="overpass">🪜 景觀陸橋階梯</button>
   <button class="store-btn" data-target="mart">🏪 快捷便利商店</button>
-  <button class="store-btn" data-target="pharmacy">💊 健康藥局</button>
+  <button class="store-btn" data-target="pharmacy">💊 健康連鎖藥局</button>
   <button class="store-btn" data-target="park">🌳 微風陽光公園</button>
 </div>
 
+<!-- Real-time GuidPaw Action Warning Banner -->
+<div id="guideAlertToast">
+  <span class="icon" id="toastIcon">⚠️</span>
+  <span class="msg" id="toastMsg">GuidPaw 發現前方障礙</span>
+</div>
+
+<!-- Right Sensor Telemetry Panel -->
 <div class="hud panel" id="sensorPanel">
-  <div class="row"><span><i class="dot" id="dotForward" style="background:#34d0b6"></i>前方光學雷達</span><span class="v" id="valForward">-- m</span></div>
-  <div class="row"><span><i class="dot" id="dotDown" style="background:#34d0b6"></i>地面/階梯 ToF</span><span class="v" id="valDown">-- m</span></div>
-  <div class="row"><span><i class="dot" id="dotUp" style="background:#34d0b6"></i>AI 懸空視覺</span><span class="v" id="valUp">正常</span></div>
+  <h2>GuidPaw 多感測器數據</h2>
+  <div class="row"><span><i class="dot" id="dotForward" style="background:#34d0b6"></i>前方 LiDAR 雷達</span><span class="v" id="valForward">-- m</span></div>
+  <div class="row"><span><i class="dot" id="dotDown" style="background:#34d0b6"></i>地面階梯 ToF</span><span class="v" id="valDown">-- m</span></div>
+  <div class="row"><span><i class="dot" id="dotUp" style="background:#34d0b6"></i>AI 懸空視覺感測</span><span class="v" id="valUp">正常</span></div>
+  <div class="row"><span>GuidPaw 提示狀態</span><span class="v" id="valDogState" style="color:var(--teal)">正常引導</span></div>
   <div class="row"><span>馬路過街燈號</span><span class="v" id="valLight">--</span></div>
-  <div class="row"><span>周邊車流量</span><span class="v" id="valTraffic">雙向正常</span></div>
 </div>
 
 <div class="hud panel" id="telemetryPanel">
-  <h3>📊 導航數據與車流監控 <span style="font-size:9px; color:var(--teal)">LIVE</span></h3>
-  <div class="metric"><span>目前標地</span><span class="metric-val" id="mTarget">未選擇</span></div>
-  <div class="metric"><span>總行走距離</span><span class="metric-val" id="mDist">0.0 m</span></div>
-  <div class="metric"><span>行進姿態偏離</span><span class="metric-val" id="mDev">0.00 m</span></div>
-  <div class="metric"><span>避障反應平滑度</span><span class="metric-val" id="mSmooth">100%</span></div>
-  <div class="metric"><span>與當前目標距離</span><span class="metric-val" id="mTargetDist">-- m</span></div>
+  <h2>導盲牽繩體感反饋</h2>
+  <div class="row"><span>總引向距離</span><span class="v" id="mDist">0.0 m</span></div>
+  <div class="row"><span>距離目的地</span><span class="v" id="mTargetDist">-- m</span></div>
+  <div class="pull-indicator">
+    <div class="arrow" id="pullArrow">⬆️</div>
+    <div style="font-size: 11px; margin-top: 4px; color: var(--muted);" id="pullLabel">待機中</div>
+    <div class="vibe-bar"><div class="vibe-fill" id="vibeBarFill"></div></div>
+  </div>
 </div>
 
-<div class="hud panel" id="hapticPanel">
-  <h3>牽繩觸覺反饋 HAPTIC LEASH</h3>
-  <div id="pullArrowWrap">
-    <svg id="pullArrow" viewBox="0 0 24 24" fill="none" stroke="#8fa0b4" stroke-width="2"><path d="M12 19V5M12 5l-5 5M12 5l5 5"/></svg>
-    <span id="pullLabel">待機中</span>
-  </div>
-  <div id="vibeBarBg"><div id="vibeBarFill"></div></div>
+<div class="hud panel" id="btPanel">
+  <div style="font-size: 11px; font-weight: bold; color: var(--teal); margin-bottom: 6px;">BLE 智慧牽繩連線日誌</div>
   <div id="btLog"></div>
 </div>
 
 <div class="hud" id="bottomBar">
+  <button id="btnStairs">🪜 移至陸橋階梯段</button>
   <button id="btnRed">🚦 切換斑馬線紅燈</button>
-  <button id="btnBranch">🌿 產生樹枝懸空障礙</button>
+  <button id="btnBranch">🌿 產生懸空招牌/樹枝</button>
+  <button id="btnBarrier">🚧 施工道路圍籬</button>
   <button id="btnManual">🎮 WASD 手動操控</button>
   <button id="btnCamera">📷 切換視角 (隨狗/鳥瞰)</button>
   <button id="btnReset" class="danger">⚡ 重置位置</button>
 </div>
 
+<!-- Arrival Notification Overlay -->
 <div id="arrivalCard">
-  <h2 id="arrivalTitle">🎉 已平安抵達！</h2>
-  <p id="arrivalDesc">導盲犬 Pupper V3 已安全引導您到達目的地。</p>
-  <button id="btnCloseArrival">確認並繼續</button>
+  <h3 id="arrivalTitle">🎉 平安抵達目的地！</h3>
+  <p id="arrivalDesc">GuidPaw 導盲犬已順利帶領您到達目的地。</p>
+  <button onclick="document.getElementById('arrivalCard').style.display='none'" class="active" style="width: 100%;">確定</button>
 </div>
 
 <script>
@@ -267,7 +221,7 @@ orbitControls.enableDamping = true;
 const ambientLight = new THREE.AmbientLight(0x9cb0c5, 0.7);
 scene.add(ambientLight);
 
-const sunLight = new THREE.DirectionalLight(0xfff5ea, 1.1);
+const sunLight = new THREE.DirectionalLight(0xfff5ea, 1.2);
 sunLight.position.set(20, 35, -15);
 sunLight.castShadow = true;
 sunLight.shadow.mapSize.set(2048, 2048);
@@ -284,8 +238,9 @@ const STREET_END = 130;
 const SIDEWALK_X = -3.0;
 const ROAD_CENTER_X = 3.5;
 const WALKABLE_SURFACES = [];
+const HAZARD_OBJECTS = [];
 
-// Ground Base (Grass Field)
+// Ground Base
 const groundMat = new THREE.MeshStandardMaterial({ color: 0x142019, roughness: 0.95 });
 const ground = new THREE.Mesh(new THREE.PlaneGeometry(250, STREET_END - STREET_START + 40), groundMat);
 ground.rotation.x = -Math.PI / 2;
@@ -293,7 +248,7 @@ ground.position.set(0, -0.2, (STREET_START + STREET_END) / 2);
 ground.receiveShadow = true;
 scene.add(ground);
 
-// Sidewalk Paving (-4.8 to -1.2)
+// Sidewalk Paving
 const sidewalkMat = new THREE.MeshStandardMaterial({ color: 0x727d88, roughness: 0.6 });
 const sidewalk = new THREE.Mesh(new THREE.BoxGeometry(3.6, 0.3, STREET_END - STREET_START), sidewalkMat);
 sidewalk.position.set(SIDEWALK_X, -0.15, (STREET_START + STREET_END) / 2);
@@ -301,9 +256,149 @@ sidewalk.receiveShadow = true;
 scene.add(sidewalk);
 WALKABLE_SURFACES.push(sidewalk);
 
-// Yellow Tactile Paving Line along Sidewalk
+// Staircase Overpass Parameters
+const STAIR_START_Z = 32.0;
+const STAIR_HEIGHT = 1.3;
+const STAIR_COUNT = 8;
+const STAIR_STEP_DEPTH = 0.4;
+const PLATFORM_LENGTH = 5.0;
+
+const stairMat = new THREE.MeshStandardMaterial({ color: 0x505c69, roughness: 0.5 });
+const stairSideMat = new THREE.MeshStandardMaterial({ color: 0x3a4550, roughness: 0.6 });
+const tactileWarningMat = new THREE.MeshStandardMaterial({ color: 0xe65100, roughness: 0.3 });
+const railMat = new THREE.MeshStandardMaterial({ color: 0x34d0b6, metalness: 0.8, roughness: 0.2 });
+const postMat = new THREE.MeshStandardMaterial({ color: 0x22303d, metalness: 0.5 });
+const pillarMat = new THREE.MeshStandardMaterial({ color: 0x2d3844, roughness: 0.7 });
+
+const OVERPASS_PLATFORM_Z = STAIR_START_Z + STAIR_COUNT * STAIR_STEP_DEPTH + PLATFORM_LENGTH / 2;
+const DOWN_STAIR_START_Z = STAIR_START_Z + STAIR_COUNT * STAIR_STEP_DEPTH + PLATFORM_LENGTH;
+const DOWN_STAIR_END_Z = DOWN_STAIR_START_Z + STAIR_COUNT * STAIR_STEP_DEPTH;
+
+// Overpass Support Pillars (Ground to Platform deck)
+const pillar1 = new THREE.Mesh(new THREE.CylinderGeometry(0.18, 0.18, STAIR_HEIGHT, 16), pillarMat);
+pillar1.position.set(SIDEWALK_X - 1.3, STAIR_HEIGHT / 2 - 0.15, STAIR_START_Z + STAIR_COUNT * STAIR_STEP_DEPTH + 0.3);
+pillar1.castShadow = true;
+scene.add(pillar1);
+
+const pillar2 = new THREE.Mesh(new THREE.CylinderGeometry(0.18, 0.18, STAIR_HEIGHT, 16), pillarMat);
+pillar2.position.set(SIDEWALK_X + 1.3, STAIR_HEIGHT / 2 - 0.15, STAIR_START_Z + STAIR_COUNT * STAIR_STEP_DEPTH + 0.3);
+pillar2.castShadow = true;
+scene.add(pillar2);
+
+const pillar3 = new THREE.Mesh(new THREE.CylinderGeometry(0.18, 0.18, STAIR_HEIGHT, 16), pillarMat);
+pillar3.position.set(SIDEWALK_X - 1.3, STAIR_HEIGHT / 2 - 0.15, DOWN_STAIR_START_Z - 0.3);
+pillar3.castShadow = true;
+scene.add(pillar3);
+
+const pillar4 = new THREE.Mesh(new THREE.CylinderGeometry(0.18, 0.18, STAIR_HEIGHT, 16), pillarMat);
+pillar4.position.set(SIDEWALK_X + 1.3, STAIR_HEIGHT / 2 - 0.15, DOWN_STAIR_START_Z - 0.3);
+pillar4.castShadow = true;
+scene.add(pillar4);
+
+// 1. Up Stairs Steps & Solid Skirt
+for (let i = 0; i < STAIR_COUNT; i++) {
+  const stepH = (STAIR_HEIGHT / STAIR_COUNT) * (i + 1);
+  const stepZ = STAIR_START_Z + i * STAIR_STEP_DEPTH + STAIR_STEP_DEPTH / 2;
+  const stepMesh = new THREE.Mesh(new THREE.BoxGeometry(3.2, stepH, STAIR_STEP_DEPTH), stairMat);
+  stepMesh.position.set(SIDEWALK_X, stepH / 2 - 0.15, stepZ);
+  stepMesh.castShadow = true;
+  stepMesh.receiveShadow = true;
+  scene.add(stepMesh);
+  WALKABLE_SURFACES.push(stepMesh);
+}
+
+// Up Stairs Side Stringers (Walls under steps)
+const upStringer = new THREE.Mesh(new THREE.BoxGeometry(3.3, STAIR_HEIGHT, STAIR_COUNT * STAIR_STEP_DEPTH), stairSideMat);
+upStringer.position.set(SIDEWALK_X, STAIR_HEIGHT / 2 - 0.25, STAIR_START_Z + (STAIR_COUNT * STAIR_STEP_DEPTH) / 2);
+upStringer.castShadow = true;
+scene.add(upStringer);
+
+// 2. Main Overpass Deck
+const platformDeck = new THREE.Mesh(new THREE.BoxGeometry(3.4, 0.25, PLATFORM_LENGTH), stairMat);
+platformDeck.position.set(SIDEWALK_X, STAIR_HEIGHT - 0.125, OVERPASS_PLATFORM_Z);
+platformDeck.castShadow = true;
+platformDeck.receiveShadow = true;
+scene.add(platformDeck);
+WALKABLE_SURFACES.push(platformDeck);
+
+// 3. Down Stairs Steps & Solid Rear Skirt Modeling (FIXED: Complete Rear Staircase Structural Fill)
+for (let i = 0; i < STAIR_COUNT; i++) {
+  const stepH = STAIR_HEIGHT - (STAIR_HEIGHT / STAIR_COUNT) * i;
+  const stepZ = DOWN_STAIR_START_Z + i * STAIR_STEP_DEPTH + STAIR_STEP_DEPTH / 2;
+  const stepMesh = new THREE.Mesh(new THREE.BoxGeometry(3.2, stepH, STAIR_STEP_DEPTH), stairMat);
+  stepMesh.position.set(SIDEWALK_X, stepH / 2 - 0.15, stepZ);
+  stepMesh.castShadow = true;
+  stepMesh.receiveShadow = true;
+  scene.add(stepMesh);
+  WALKABLE_SURFACES.push(stepMesh);
+}
+
+// Down Stairs Solid Skirt/Wall Base (Structural fill behind stairs)
+const downStringer = new THREE.Mesh(new THREE.BoxGeometry(3.3, STAIR_HEIGHT, STAIR_COUNT * STAIR_STEP_DEPTH), stairSideMat);
+downStringer.position.set(SIDEWALK_X, STAIR_HEIGHT / 2 - 0.25, DOWN_STAIR_START_Z + (STAIR_COUNT * STAIR_STEP_DEPTH) / 2);
+downStringer.castShadow = true;
+scene.add(downStringer);
+
+// Full Length Continuous Handrails & Balusters
+function createHandrailSection(startX, startY, startZ, endX, endY, endZ) {
+  const dx = endX - startX, dy = endY - startY, dz = endZ - startZ;
+  const len = Math.sqrt(dx*dx + dy*dy + dz*dz);
+  
+  const railGroup = new THREE.Group();
+  const rail = new THREE.Mesh(new THREE.CylinderGeometry(0.04, 0.04, len, 12), railMat);
+  rail.position.set(startX + dx/2, startY + dy/2, startZ + dz/2);
+  
+  // Rotate to align along direction vector
+  const axis = new THREE.Vector3(0, 1, 0);
+  const dir = new THREE.Vector3(dx, dy, dz).normalize();
+  const quaternion = new THREE.Quaternion().setFromUnitVectors(axis, dir);
+  rail.quaternion.copy(quaternion);
+  railGroup.add(rail);
+
+  // Add Vertical Support Posts along rail
+  const postCount = Math.max(2, Math.floor(len / 1.2));
+  for (let i = 0; i <= postCount; i++) {
+    const t = i / postCount;
+    const px = startX + dx * t;
+    const py = startY + dy * t;
+    const pz = startZ + dz * t;
+    
+    const post = new THREE.Mesh(new THREE.CylinderGeometry(0.03, 0.03, 0.9, 8), postMat);
+    post.position.set(px, py - 0.45, pz);
+    railGroup.add(post);
+  }
+  scene.add(railGroup);
+}
+
+// Up Handrails (Left & Right)
+createHandrailSection(SIDEWALK_X - 1.5, 0.9, STAIR_START_Z, SIDEWALK_X - 1.5, STAIR_HEIGHT + 0.9, STAIR_START_Z + STAIR_COUNT * STAIR_STEP_DEPTH);
+createHandrailSection(SIDEWALK_X + 1.5, 0.9, STAIR_START_Z, SIDEWALK_X + 1.5, STAIR_HEIGHT + 0.9, STAIR_START_Z + STAIR_COUNT * STAIR_STEP_DEPTH);
+
+// Deck Handrails (Left & Right)
+createHandrailSection(SIDEWALK_X - 1.5, STAIR_HEIGHT + 0.9, STAIR_START_Z + STAIR_COUNT * STAIR_STEP_DEPTH, SIDEWALK_X - 1.5, STAIR_HEIGHT + 0.9, DOWN_STAIR_START_Z);
+createHandrailSection(SIDEWALK_X + 1.5, STAIR_HEIGHT + 0.9, STAIR_START_Z + STAIR_COUNT * STAIR_STEP_DEPTH, SIDEWALK_X + 1.5, STAIR_HEIGHT + 0.9, DOWN_STAIR_START_Z);
+
+// Down Handrails (Left & Right)
+createHandrailSection(SIDEWALK_X - 1.5, STAIR_HEIGHT + 0.9, DOWN_STAIR_START_Z, SIDEWALK_X - 1.5, 0.9, DOWN_STAIR_END_Z);
+createHandrailSection(SIDEWALK_X + 1.5, STAIR_HEIGHT + 0.9, DOWN_STAIR_START_Z, SIDEWALK_X + 1.5, 0.9, DOWN_STAIR_END_Z);
+
+// Tactile Warning Strips
+const upLandingTactile = new THREE.Mesh(new THREE.BoxGeometry(3.0, 0.04, 0.6), tactileWarningMat);
+upLandingTactile.position.set(SIDEWALK_X, 0.02, STAIR_START_Z - 0.5);
+scene.add(upLandingTactile);
+
+const topLandingTactile = new THREE.Mesh(new THREE.BoxGeometry(3.0, 0.04, 0.6), tactileWarningMat);
+topLandingTactile.position.set(SIDEWALK_X, STAIR_HEIGHT + 0.02, DOWN_STAIR_START_Z - 0.3);
+scene.add(topLandingTactile);
+
+const downLandingTactile = new THREE.Mesh(new THREE.BoxGeometry(3.0, 0.04, 0.6), tactileWarningMat);
+downLandingTactile.position.set(SIDEWALK_X, 0.02, DOWN_STAIR_END_Z + 0.5);
+scene.add(downLandingTactile);
+
+// Tactile Paving Tiles along Sidewalk
 const tactileMat = new THREE.MeshStandardMaterial({ color: 0xeba823, roughness: 0.4 });
 for (let z = STREET_START; z <= STREET_END; z += 0.8) {
+  if (z >= STAIR_START_Z - 0.5 && z <= DOWN_STAIR_END_Z + 0.8) continue;
   const tile = new THREE.Mesh(new THREE.BoxGeometry(0.7, 0.03, 0.7), tactileMat);
   tile.position.set(SIDEWALK_X, 0.01, z);
   tile.receiveShadow = true;
@@ -311,213 +406,177 @@ for (let z = STREET_START; z <= STREET_END; z += 0.8) {
   WALKABLE_SURFACES.push(tile);
 }
 
-// Asphalt Road Lanes (X: 0.5 to 6.5)
-const roadMat = new THREE.MeshStandardMaterial({ color: 0x212529, roughness: 0.8 });
-const road = new THREE.Mesh(new THREE.BoxGeometry(7.0, 0.28, STREET_END - STREET_START), roadMat);
-road.position.set(ROAD_CENTER_X, -0.16, (STREET_START + STREET_END) / 2);
+// Road Surface
+const roadMat = new THREE.MeshStandardMaterial({ color: 0x222831, roughness: 0.8 });
+const road = new THREE.Mesh(new THREE.BoxGeometry(7.0, 0.1, STREET_END - STREET_START), roadMat);
+road.position.set(ROAD_CENTER_X, -0.05, (STREET_START + STREET_END) / 2);
 road.receiveShadow = true;
 scene.add(road);
 
-// Road Center Divider Line (Dashed White)
-const lineMat = new THREE.MeshStandardMaterial({ color: 0xe0e0e0, roughness: 0.5 });
-for (let z = STREET_START; z <= STREET_END; z += 4.0) {
-  const lineSegment = new THREE.Mesh(new THREE.BoxGeometry(0.2, 0.02, 2.2), lineMat);
-  lineSegment.position.set(ROAD_CENTER_X, 0.01, z);
-  scene.add(lineSegment);
-}
-
-// Zebra Crosswalk at Z = 45
-const CROSSWALK_Z = 45.0;
-const stripeMat = new THREE.MeshStandardMaterial({ color: 0xf0f0f0, roughness: 0.4 });
-for (let x = -4.2; x <= 6.5; x += 1.2) {
-  const stripe = new THREE.Mesh(new THREE.BoxGeometry(0.7, 0.025, 4.5), stripeMat);
-  stripe.position.set(x, 0.012, CROSSWALK_Z);
-  scene.add(stripe);
-}
-
+// Store Definitions
 const STORES = {
   cafe: { name: '暖陽咖啡館', z: 10.0, color: 0x8c6747, signColor: 0xffaa44, targetX: SIDEWALK_X - 1.2, icon: '☕' },
-  bakery: { name: '麥香烘焙坊', z: 28.0, color: 0xb58c4c, signColor: 0xffd166, targetX: SIDEWALK_X - 1.2, icon: '🍞' },
+  bakery: { name: '麥香烘焙坊', z: 22.0, color: 0xb58c4c, signColor: 0xffd166, targetX: SIDEWALK_X - 1.2, icon: '🍞' },
+  overpass: { name: '景觀陸橋階梯', z: STAIR_START_Z - 0.8, color: 0x9b8cf2, signColor: 0xc4b5fd, targetX: SIDEWALK_X, icon: '🪜' },
   mart: { name: '快捷便利商店', z: 65.0, color: 0x2a3e52, signColor: 0x34d0b6, targetX: SIDEWALK_X - 1.2, icon: '🏪' },
   pharmacy: { name: '健康連鎖藥局', z: 85.0, color: 0xdddddd, signColor: 0x00e676, targetX: SIDEWALK_X - 1.2, icon: '💊' },
   park: { name: '微風陽光公園', z: 105.0, color: 0x3d6e46, signColor: 0x81c784, targetX: SIDEWALK_X - 1.2, icon: '🌳' }
 };
 
-function createBuilding(x, z, width, depth, height, color, name, signColor) {
-  const group = new THREE.Group();
-  
-  const mat = new THREE.MeshStandardMaterial({ color: color, roughness: 0.7 });
-  const bldg = new THREE.Mesh(new THREE.BoxGeometry(width, height, depth), mat);
-  bldg.position.set(0, height / 2, 0);
-  bldg.castShadow = true;
-  bldg.receiveShadow = true;
-  group.add(bldg);
+function createBuilding(x, z, w, d, h, color, name) {
+  const bGeo = new THREE.BoxGeometry(w, h, d);
+  const bMat = new THREE.MeshStandardMaterial({ color: color, roughness: 0.7 });
+  const mesh = new THREE.Mesh(bGeo, bMat);
+  mesh.position.set(x, h / 2, z);
+  mesh.castShadow = true;
+  mesh.receiveShadow = true;
+  scene.add(mesh);
+  return mesh;
+}
 
-  const glassMat = new THREE.MeshStandardMaterial({ color: 0x88ccff, roughness: 0.1, metalness: 0.8, transparent: true, opacity: 0.6 });
-  const windowMesh = new THREE.Mesh(new THREE.BoxGeometry(0.1, height * 0.45, depth * 0.7), glassMat);
-  windowMesh.position.set(width / 2 + 0.02, height * 0.3, 0);
-  group.add(windowMesh);
+createBuilding(-8.5, STORES.cafe.z, 6.0, 7.0, 4.5, STORES.cafe.color, STORES.cafe.name);
+createBuilding(-8.5, STORES.bakery.z, 6.0, 7.5, 4.8, STORES.bakery.color, STORES.bakery.name);
+createBuilding(-8.5, STORES.mart.z, 6.0, 8.5, 5.2, STORES.mart.color, STORES.mart.name);
+createBuilding(-8.5, STORES.pharmacy.z, 6.0, 7.0, 5.0, STORES.pharmacy.color, STORES.pharmacy.name);
 
-  const doorFrame = new THREE.Mesh(new THREE.BoxGeometry(0.15, height * 0.5, 1.4), new THREE.MeshStandardMaterial({ color: 0x111111 }));
-  doorFrame.position.set(width / 2 + 0.05, height * 0.25, -depth * 0.2);
-  group.add(doorFrame);
+let activeBarrierObstacle = null;
+let activeSignObstacle = null;
 
-  const signMat = new THREE.MeshStandardMaterial({ color: signColor, emissive: signColor, emissiveIntensity: 0.6 });
-  const signBoard = new THREE.Mesh(new THREE.BoxGeometry(0.3, 0.9, depth * 0.85), signMat);
-  signBoard.position.set(width / 2 + 0.1, height * 0.75, 0);
-  group.add(signBoard);
-
-  const pLight = new THREE.PointLight(signColor, 0.8, 8);
-  pLight.position.set(width / 2 + 1.0, height * 0.7, 0);
-  group.add(pLight);
-
-  if (color === 0x8c6747 || color === 0xb58c4c) {
-    const awningMat = new THREE.MeshStandardMaterial({ color: 0xc93b2b, roughness: 0.5 });
-    const awning = new THREE.Mesh(new THREE.BoxGeometry(1.2, 0.15, depth * 0.8), awningMat);
-    awning.position.set(width / 2 + 0.6, height * 0.55, 0);
-    awning.rotation.z = -0.2;
-    group.add(awning);
+function toggleConstructionBarrier() {
+  if (activeBarrierObstacle) {
+    scene.remove(activeBarrierObstacle);
+    const idx = HAZARD_OBJECTS.indexOf(activeBarrierObstacle);
+    if (idx !== -1) HAZARD_OBJECTS.splice(idx, 1);
+    activeBarrierObstacle = null;
+    logBt('已移除道路施工圍籬');
+    return;
   }
+  const zObs = pupper.position.z + 4.0;
+  const barrierGroup = new THREE.Group();
+  const fenceMat = new THREE.MeshStandardMaterial({ color: 0xe67e22, roughness: 0.5 });
+  const fence = new THREE.Mesh(new THREE.BoxGeometry(2.4, 1.0, 0.2), fenceMat);
+  fence.position.set(0, 0.5, 0);
+  barrierGroup.add(fence);
 
-  group.position.set(x, 0, z);
+  const stripeMat = new THREE.MeshStandardMaterial({ color: 0xf1c40f });
+  const s1 = new THREE.Mesh(new THREE.BoxGeometry(2.42, 0.18, 0.22), stripeMat);
+  s1.position.set(0, 0.7, 0);
+  barrierGroup.add(s1);
+
+  barrierGroup.position.set(SIDEWALK_X, 0, zObs);
+  scene.add(barrierGroup);
+  activeBarrierObstacle = barrierGroup;
+  HAZARD_OBJECTS.push(barrierGroup);
+  logBt(`前方產生施工道路圍籬 (Z=${zObs.toFixed(1)})`);
+}
+
+function toggleOverheadSign() {
+  if (activeSignObstacle) {
+    scene.remove(activeSignObstacle);
+    activeSignObstacle = null;
+    logBt('已移除懸空障礙物');
+    return;
+  }
+  const zObs = pupper.position.z + 3.5;
+  const signGroup = new THREE.Group();
+  const signMat = new THREE.MeshStandardMaterial({ color: 0xe74c3c, emissive: 0x5a1111 });
+  const signBoard = new THREE.Mesh(new THREE.BoxGeometry(2.2, 0.8, 0.15), signMat);
+  signBoard.position.set(SIDEWALK_X + 0.3, 1.25, zObs);
+  signGroup.add(signBoard);
+
+  scene.add(signGroup);
+  activeSignObstacle = signGroup;
+  logBt(`前方產生懸空低垂招牌 (Z=${zObs.toFixed(1)})`);
+}
+
+const keys = {};
+let birdView = false;
+let vehicles = [];
+let pole = null;
+
+const trafficLight = {
+  state: 'GREEN',
+  autoTimer: 0,
+  manualOverrideUntil: 0,
+  lightMeshRed: null,
+  lightMeshYellow: null,
+  lightMeshGreen: null
+};
+
+window.addEventListener('keydown', (e) => { keys[e.key.toLowerCase()] = true; });
+window.addEventListener('keyup', (e) => { keys[e.key.toLowerCase()] = false; });
+
+function createTrafficLight() {
+  const poleGeo = new THREE.CylinderGeometry(0.08, 0.08, 4.0);
+  const poleMat = new THREE.MeshStandardMaterial({ color: 0x4a5568, metalness: 0.6 });
+  pole = new THREE.Mesh(poleGeo, poleMat);
+  pole.position.set(SIDEWALK_X + 2.2, 2.0, 52.0);
+  scene.add(pole);
+
+  const boxGeo = new THREE.BoxGeometry(0.4, 1.2, 0.4);
+  const boxMat = new THREE.MeshStandardMaterial({ color: 0x1a202c });
+  const box = new THREE.Mesh(boxGeo, boxMat);
+  box.position.set(SIDEWALK_X + 2.2, 3.5, 52.0);
+  scene.add(box);
+
+  const matRed = new THREE.MeshBasicMaterial({ color: 0xff0000 });
+  const matYellow = new THREE.MeshBasicMaterial({ color: 0xffff00 });
+  const matGreen = new THREE.MeshBasicMaterial({ color: 0x00ff00 });
+
+  const rGeo = new THREE.SphereGeometry(0.1, 16, 16);
+  trafficLight.lightMeshRed = new THREE.Mesh(rGeo, matRed);
+  trafficLight.lightMeshRed.position.set(SIDEWALK_X + 2.2, 3.8, 51.8);
+  scene.add(trafficLight.lightMeshRed);
+
+  trafficLight.lightMeshYellow = new THREE.Mesh(rGeo, matYellow);
+  trafficLight.lightMeshYellow.position.set(SIDEWALK_X + 2.2, 3.5, 51.8);
+  scene.add(trafficLight.lightMeshYellow);
+
+  trafficLight.lightMeshGreen = new THREE.Mesh(rGeo, matGreen);
+  trafficLight.lightMeshGreen.position.set(SIDEWALK_X + 2.2, 3.2, 51.8);
+  scene.add(trafficLight.lightMeshGreen);
+}
+createTrafficLight();
+
+function updateTrafficLightVisual() {
+  if (!trafficLight.lightMeshRed) return;
+  trafficLight.lightMeshRed.material.opacity = trafficLight.state === 'RED' ? 1.0 : 0.2;
+  trafficLight.lightMeshRed.material.transparent = trafficLight.state !== 'RED';
+  
+  trafficLight.lightMeshYellow.material.opacity = trafficLight.state === 'YELLOW' ? 1.0 : 0.2;
+  trafficLight.lightMeshYellow.material.transparent = trafficLight.state !== 'YELLOW';
+
+  trafficLight.lightMeshGreen.material.opacity = trafficLight.state === 'GREEN' ? 1.0 : 0.2;
+  trafficLight.lightMeshGreen.material.transparent = trafficLight.state !== 'GREEN';
+}
+
+function createCar(color) {
+  const group = new THREE.Group();
+  const body = new THREE.Mesh(
+    new THREE.BoxGeometry(1.8, 1.0, 3.6),
+    new THREE.MeshStandardMaterial({ color: color })
+  );
+  body.position.y = 0.6;
+  body.castShadow = true;
+  group.add(body);
   scene.add(group);
   return group;
 }
 
-createBuilding(-8.5, STORES.cafe.z, 6.0, 7.0, 4.5, STORES.cafe.color, STORES.cafe.name, STORES.cafe.signColor);
-createBuilding(-8.5, STORES.bakery.z, 6.0, 7.5, 4.8, STORES.bakery.color, STORES.bakery.name, STORES.bakery.signColor);
-createBuilding(-8.5, STORES.mart.z, 6.0, 8.5, 5.2, STORES.mart.color, STORES.mart.name, STORES.mart.signColor);
-createBuilding(-8.5, STORES.pharmacy.z, 6.0, 7.0, 5.0, STORES.pharmacy.color, STORES.pharmacy.name, STORES.pharmacy.signColor);
-
-// Park Setup
-const parkGroup = new THREE.Group();
-const parkGrass = new THREE.Mesh(new THREE.BoxGeometry(12, 0.2, 20), new THREE.MeshStandardMaterial({ color: 0x2e5a36, roughness: 0.8 }));
-parkGrass.position.set(-11, 0, STORES.park.z);
-parkGroup.add(parkGrass);
-
-const benchMat = new THREE.MeshStandardMaterial({ color: 0x5c3d21 });
-const bench = new THREE.Mesh(new THREE.BoxGeometry(0.8, 0.5, 2.0), benchMat);
-bench.position.set(-5.5, 0.3, STORES.park.z);
-parkGroup.add(bench);
-
-function addParkTree(x, z) {
-  const trunk = new THREE.Mesh(new THREE.CylinderGeometry(0.2, 0.25, 2.5, 8), new THREE.MeshStandardMaterial({ color: 0x422d1d }));
-  trunk.position.set(x, 1.25, z);
-  const foliage = new THREE.Mesh(new THREE.SphereGeometry(1.4, 8, 8), new THREE.MeshStandardMaterial({ color: 0x1e5229, roughness: 0.8 }));
-  foliage.position.set(x, 2.8, z);
-  scene.add(trunk);
-  scene.add(foliage);
-}
-addParkTree(-7.5, STORES.park.z - 4);
-addParkTree(-9.0, STORES.park.z + 5);
-addParkTree(-6.5, 18.0);
-scene.add(parkGroup);
-
-const trafficLight = { state: 'GREEN', manualOverrideUntil: 0, autoTimer: 0 };
-
-const poleMat = new THREE.MeshStandardMaterial({ color: 0x333d47, metalness: 0.5 });
-const pole = new THREE.Mesh(new THREE.CylinderGeometry(0.09, 0.09, 3.8, 8), poleMat);
-pole.position.set(-1.1, 1.9, CROSSWALK_Z - 2.5);
-scene.add(pole);
-
-const lightBox = new THREE.Mesh(new THREE.BoxGeometry(0.4, 1.0, 0.4), new THREE.MeshStandardMaterial({ color: 0x161c22 }));
-lightBox.position.set(-1.1, 3.4, CROSSWALK_Z - 2.5);
-scene.add(lightBox);
-
-function makeBulb(y, color) {
-  const b = new THREE.Mesh(new THREE.SphereGeometry(0.12, 12, 12), new THREE.MeshStandardMaterial({ color: 0x111111, emissive: color, emissiveIntensity: 0.15 }));
-  b.position.set(-1.1, y, CROSSWALK_Z - 2.28);
-  scene.add(b);
-  return b;
-}
-const bulbRed = makeBulb(3.7, 0xff3333);
-const bulbYellow = makeBulb(3.4, 0xffcc33);
-const bulbGreen = makeBulb(3.1, 0x33ff66);
-
-function updateTrafficLightVisual() {
-  bulbRed.material.emissiveIntensity = trafficLight.state === 'RED' ? 2.0 : 0.15;
-  bulbYellow.material.emissiveIntensity = trafficLight.state === 'YELLOW' ? 2.0 : 0.15;
-  bulbGreen.material.emissiveIntensity = trafficLight.state === 'GREEN' ? 2.0 : 0.15;
-}
-
-for (let z = STREET_START + 10; z <= STREET_END; z += 25) {
-  const lampPole = new THREE.Mesh(new THREE.CylinderGeometry(0.06, 0.08, 4.2, 8), poleMat);
-  lampPole.position.set(-1.0, 2.1, z);
-  scene.add(lampPole);
-  const lampHead = new THREE.Mesh(new THREE.SphereGeometry(0.2, 8, 8), new THREE.MeshStandardMaterial({ color: 0xffffff, emissive: 0xffe0b2, emissiveIntensity: 0.8 }));
-  lampHead.position.set(-1.0, 4.2, z);
-  scene.add(lampHead);
-  const lLight = new THREE.PointLight(0xffe0b2, 0.5, 12);
-  lLight.position.set(-1.0, 4.0, z);
-  scene.add(lLight);
-}
-
-const vehicles = [];
-
-function createVehicleMesh(type, bodyColor) {
-  const carGroup = new THREE.Group();
-  const mainMat = new THREE.MeshStandardMaterial({ color: bodyColor, roughness: 0.3, metalness: 0.4 });
-  const glassMat = new THREE.MeshStandardMaterial({ color: 0x112233, roughness: 0.1, metalness: 0.9 });
-  const wheelMat = new THREE.MeshStandardMaterial({ color: 0x151515, roughness: 0.9 });
-
-  let length = 3.8, width = 1.7, height = 1.3;
-  if (type === 'bus') { length = 8.0; width = 2.2; height = 2.6; }
-  else if (type === 'truck') { length = 5.2; width = 2.0; height = 2.1; }
-
-  const body = new THREE.Mesh(new THREE.BoxGeometry(width, height * 0.55, length), mainMat);
-  body.position.y = height * 0.35 + 0.2;
-  body.castShadow = true;
-  carGroup.add(body);
-
-  const cabin = new THREE.Mesh(new THREE.BoxGeometry(width * 0.9, height * 0.45, length * 0.55), glassMat);
-  cabin.position.set(0, height * 0.7, -length * 0.05);
-  cabin.castShadow = true;
-  carGroup.add(cabin);
-
-  const wheels = [];
-  const wheelRadius = 0.3;
-  const wheelPositions = [
-    [-width / 2 - 0.05, wheelRadius, length / 3],
-    [width / 2 + 0.05, wheelRadius, length / 3],
-    [-width / 2 - 0.05, wheelRadius, -length / 3],
-    [width / 2 + 0.05, wheelRadius, -length / 3],
-  ];
-
-  wheelPositions.forEach(pos => {
-    const wheel = new THREE.Mesh(new THREE.CylinderGeometry(wheelRadius, wheelRadius, 0.22, 12), wheelMat);
-    wheel.rotation.z = Math.PI / 2;
-    wheel.position.set(pos[0], pos[1], pos[2]);
-    carGroup.add(wheel);
-    wheels.push(wheel);
-  });
-
-  return { mesh: carGroup, wheels: wheels, length: length };
-}
-
-const carConfigs = [
-  { lane: 1, type: 'car', color: 0xe74c3c, z: -10, speed: 10 },
-  { lane: 1, type: 'taxi', color: 0xf1c40f, z: 30, speed: 11 },
-  { lane: 1, type: 'bus', color: 0x2980b9, z: 70, speed: 8 },
-  { lane: 2, type: 'car', color: 0x9b59b6, z: 120, speed: -10 },
-  { lane: 2, type: 'truck', color: 0x34495e, z: 80, speed: -9 },
-  { lane: 2, type: 'car', color: 0x2ecc71, z: 20, speed: -11 }
+vehicles = [
+  { mesh: createCar(0x3498db), lane: 1, speed: 8.0, initialZ: -10 },
+  { mesh: createCar(0xe74c3c), lane: 2, speed: 10.0, initialZ: 80 }
 ];
 
-carConfigs.forEach(cfg => {
-  const vData = createVehicleMesh(cfg.type, cfg.color);
-  const xPos = cfg.lane === 1 ? 1.8 : 5.2;
-  vData.mesh.position.set(xPos, 0, cfg.z);
-  if (cfg.lane === 2) { vData.mesh.rotation.y = Math.PI; }
-  scene.add(vData.mesh);
-  vehicles.push({
-    mesh: vData.mesh,
-    wheels: vData.wheels,
-    lane: cfg.lane,
-    baseSpeed: cfg.speed,
-    currentSpeed: cfg.speed,
-    length: vData.length
+function updateVehicles(delta) {
+  vehicles.forEach(v => {
+    const dir = v.lane === 1 ? 1 : -1;
+    v.mesh.position.z += v.speed * delta * dir;
+    v.mesh.position.x = v.lane === 1 ? 1.8 : 5.2;
+    if (v.mesh.position.z > STREET_END) v.mesh.position.z = STREET_START;
+    if (v.mesh.position.z < STREET_START) v.mesh.position.z = STREET_END;
   });
-});
+}
 
 const pupper = new THREE.Group();
 const bodyMat = new THREE.MeshStandardMaterial({ color: 0x2a3645, roughness: 0.5 });
@@ -537,7 +596,7 @@ torsoGroup.add(dogHead);
 
 const cameraFrustum = new THREE.Mesh(
   new THREE.ConeGeometry(0.38, 1.1, 4, 1, true),
-  new THREE.MeshBasicMaterial({ color: 0x34d0b6, transparent: true, opacity: 0.2, side: THREE.DoubleSide })
+  new THREE.MeshBasicMaterial({ color: 0x34d0b6, transparent: true, opacity: 0.25, side: THREE.DoubleSide })
 );
 cameraFrustum.rotation.x = -Math.PI / 2.3;
 cameraFrustum.position.set(0, 0.65, 0.75);
@@ -564,7 +623,19 @@ pupper.add(torsoGroup);
 pupper.position.set(SIDEWALK_X, 0.05, 0);
 scene.add(pupper);
 
-// Raycasters
+let toastTimeout = null;
+function showToastAlert(icon, text) {
+  const toast = document.getElementById('guideAlertToast');
+  document.getElementById('toastIcon').textContent = icon;
+  document.getElementById('toastMsg').textContent = text;
+  toast.classList.add('show');
+  clearTimeout(toastTimeout);
+  toastTimeout = setTimeout(() => {
+    toast.classList.remove('show');
+  }, 2600);
+}
+
+// Raycasters for Sensors
 const raycaster = new THREE.Raycaster();
 function makeRayLine(color) {
   const geo = new THREE.BufferGeometry().setFromPoints([new THREE.Vector3(), new THREE.Vector3()]);
@@ -579,8 +650,9 @@ const rayDownLine = makeRayLine(0x34d0b6);
 let currentState = 'IDLE';
 let activeTargetKey = null;
 let manualControl = false;
-let arrivalAlertShown = false; // Flag to prevent infinite modal popups!
-const MOVE_SPEED = 2.6;
+let arrivalAlertShown = false;
+let stairPauseTimer = 0;
+const MOVE_SPEED = 2.4;
 
 const telemetry = {
   totalDistance: 0.0,
@@ -597,88 +669,6 @@ function logBt(msg) {
   telemetry.logs.push(`[${new Date().toLocaleTimeString()}] ${msg}`);
 }
 
-const keys = {};
-window.addEventListener('keydown', e => { keys[e.key.toLowerCase()] = true; });
-window.addEventListener('keyup', e => { keys[e.key.toLowerCase()] = false; });
-
-// Store Selector Buttons
-document.querySelectorAll('.store-btn').forEach(btn => {
-  btn.addEventListener('click', e => {
-    document.querySelectorAll('.store-btn').forEach(b => b.classList.remove('active'));
-    btn.classList.add('active');
-    activeTargetKey = btn.dataset.target;
-    manualControl = false;
-    arrivalAlertShown = false; // Reset arrival popup flag for new target
-    currentState = 'NAVIGATING';
-    document.getElementById('arrivalCard').style.display = 'none';
-    document.getElementById('btnManual').classList.remove('active');
-    document.getElementById('mTarget').textContent = STORES[activeTargetKey].name;
-    logBt(`設定目的地：「${STORES[activeTargetKey].name}」，開啟引導！`);
-  });
-});
-
-// Controls & Actions
-document.getElementById('btnRed').addEventListener('click', () => {
-  trafficLight.state = trafficLight.state === 'RED' ? 'GREEN' : 'RED';
-  trafficLight.manualOverrideUntil = performance.now() + 8000;
-  logBt(trafficLight.state === 'RED' ? '手動設定斑馬線紅燈 (等候車流)' : '手動設定斑馬線綠燈 (行人通行)');
-});
-
-let activeTreeObstacle = null;
-document.getElementById('btnBranch').addEventListener('click', () => {
-  if (activeTreeObstacle) scene.remove(activeTreeObstacle);
-  const zObs = pupper.position.z + 3.0;
-  activeTreeObstacle = new THREE.Mesh(new THREE.CylinderGeometry(0.06, 0.08, 1.8, 6), new THREE.MeshStandardMaterial({ color: 0x5a3d24 }));
-  activeTreeObstacle.position.set(SIDEWALK_X, 1.15, zObs);
-  activeTreeObstacle.rotation.z = Math.PI / 2.2;
-  scene.add(activeTreeObstacle);
-  logBt(`前方產生懸空樹枝障礙 (Z=${zObs.toFixed(1)})`);
-});
-
-document.getElementById('btnManual').addEventListener('click', e => {
-  manualControl = !manualControl;
-  e.target.classList.toggle('active', manualControl);
-  if (manualControl) {
-    activeTargetKey = null;
-    arrivalAlertShown = false;
-    document.querySelectorAll('.store-btn').forEach(b => b.classList.remove('active'));
-    document.getElementById('mTarget').textContent = 'WASD 手動';
-  }
-  logBt(manualControl ? '切換為 WASD 手動操控' : '切回自主導航模式');
-});
-
-let birdView = false;
-document.getElementById('btnCamera').addEventListener('click', () => {
-  birdView = !birdView;
-  orbitControls.enabled = birdView;
-  if (birdView) {
-    camera.position.set(-3, 30, pupper.position.z + 15);
-    orbitControls.target.set(-3, 0, pupper.position.z + 15);
-  }
-  logBt(birdView ? '切換為鳥瞰視角' : '切換為隨狗視角');
-});
-
-document.getElementById('btnReset').addEventListener('click', () => {
-  pupper.position.set(SIDEWALK_X, 0.05, 0);
-  pupper.rotation.set(0, 0, 0);
-  activeTargetKey = null;
-  manualControl = false;
-  arrivalAlertShown = false;
-  document.querySelectorAll('.store-btn').forEach(b => b.classList.remove('active'));
-  document.getElementById('btnManual').classList.remove('active');
-  document.getElementById('mTarget').textContent = '未選擇';
-  document.getElementById('arrivalCard').style.display = 'none';
-  if (activeTreeObstacle) { scene.remove(activeTreeObstacle); activeTreeObstacle = null; }
-  telemetry.totalDistance = 0.0;
-  currentState = 'IDLE';
-  logBt('位置與導航數據已重置');
-});
-
-// Close arrival card logic: ONLY pop up once!
-document.getElementById('btnCloseArrival').addEventListener('click', () => {
-  document.getElementById('arrivalCard').style.display = 'none';
-});
-
 function drawMinimap() {
   const canvas = document.getElementById('minimapCanvas');
   if (!canvas) return;
@@ -688,20 +678,25 @@ function drawMinimap() {
 
   ctx.clearRect(0, 0, w, h);
 
-  // Map limits setup (Z: -15 to 125, X: -12 to 8)
   const minZ = -15, maxZ = 125;
   const minX = -12, maxX = 8;
 
   function toMapX(x) { return ((x - minX) / (maxX - minX)) * w; }
   function toMapY(z) { return ((z - minZ) / (maxZ - minZ)) * h; }
 
-  // 1. Sidewalk region
+  // Sidewalk region
   const swX1 = toMapX(-4.8);
   const swX2 = toMapX(-1.2);
   ctx.fillStyle = 'rgba(114, 125, 136, 0.35)';
   ctx.fillRect(swX1, 0, swX2 - swX1, h);
 
-  // 2. Road region
+  // Stair overpass region on mini-map
+  const stairY1 = toMapY(STAIR_START_Z);
+  const stairY2 = toMapY(DOWN_STAIR_END_Z);
+  ctx.fillStyle = 'rgba(155, 140, 242, 0.45)';
+  ctx.fillRect(swX1, stairY1, swX2 - swX1, stairY2 - stairY1);
+
+  // Road region
   const rX1 = toMapX(0.5);
   const rX2 = toMapX(6.5);
   ctx.fillStyle = 'rgba(33, 37, 41, 0.7)';
@@ -717,12 +712,12 @@ function drawMinimap() {
   ctx.stroke();
   ctx.setLineDash([]);
 
-  // 3. Crosswalk Z=45
-  const cwY = toMapY(45);
+  // Crosswalk Z=52
+  const cwY = toMapY(52);
   ctx.fillStyle = 'rgba(240, 240, 240, 0.75)';
   ctx.fillRect(swX1, cwY - 3, rX2 - swX1, 6);
 
-  // 4. Target Navigation Route Line
+  // Target Navigation Route Line
   if (activeTargetKey && STORES[activeTargetKey]) {
     const target = STORES[activeTargetKey];
     ctx.strokeStyle = '#34d0b6';
@@ -735,7 +730,7 @@ function drawMinimap() {
     ctx.setLineDash([]);
   }
 
-  // 5. Stores on mini-map
+  // Stores on mini-map
   Object.keys(STORES).forEach(key => {
     const store = STORES[key];
     const sx = toMapX(-7.5);
@@ -749,18 +744,17 @@ function drawMinimap() {
       ctx.fill();
     }
 
-    ctx.fillStyle = isTarget ? '#34d0b6' : '#f5a623';
+    ctx.fillStyle = isTarget ? '#34d0b6' : (key === 'overpass' ? '#9b8cf2' : '#f5a623');
     ctx.beginPath();
     ctx.arc(sx, sy, 4, 0, Math.PI * 2);
     ctx.fill();
 
-    // Store Name Label
     ctx.fillStyle = isTarget ? '#34d0b6' : '#a0b0c0';
     ctx.font = '9px sans-serif';
     ctx.fillText(store.name, sx + 7, sy + 3);
   });
 
-  // 6. Vehicles on mini-map
+  // Vehicles on mini-map
   vehicles.forEach(v => {
     const vx = toMapX(v.mesh.position.x);
     const vy = toMapY(v.mesh.position.z);
@@ -768,11 +762,10 @@ function drawMinimap() {
     ctx.fillRect(vx - 2, vy - 3, 4, 6);
   });
 
-  // 7. Pupper Guide Dog Location & Heading Cone
+  // GuidPaw Location & Heading Cone
   const px = toMapX(pupper.position.x);
   const py = toMapY(pupper.position.z);
 
-  // Direction vision cone on mini-map
   ctx.fillStyle = 'rgba(52, 208, 182, 0.35)';
   ctx.beginPath();
   ctx.moveTo(px, py);
@@ -781,7 +774,6 @@ function drawMinimap() {
   ctx.closePath();
   ctx.fill();
 
-  // Pupper marker dot
   ctx.fillStyle = '#ffffff';
   ctx.strokeStyle = '#34d0b6';
   ctx.lineWidth = 2;
@@ -791,27 +783,6 @@ function drawMinimap() {
   ctx.stroke();
 }
 
-function updateVehicles(delta) {
-  const carMustStopForCrosswalk = (trafficLight.state === 'GREEN');
-  
-  vehicles.forEach(v => {
-    let speed = v.baseSpeed;
-    const posZ = v.mesh.position.z;
-
-    if (carMustStopForCrosswalk) {
-      if (v.lane === 1 && posZ >= 33.0 && posZ < 43.0) { speed = 0; }
-      else if (v.lane === 2 && posZ <= 57.0 && posZ > 47.0) { speed = 0; }
-    }
-
-    v.currentSpeed += (speed - v.currentSpeed) * Math.min(1.0, delta * 4.0);
-    v.mesh.position.z += v.currentSpeed * delta;
-    v.wheels.forEach(w => w.rotation.x += (v.currentSpeed * delta) / 0.3);
-
-    if (v.lane === 1 && v.mesh.position.z > STREET_END) { v.mesh.position.z = STREET_START; }
-    if (v.lane === 2 && v.mesh.position.z < STREET_START) { v.mesh.position.z = STREET_END; }
-  });
-}
-
 function updateNavigation(delta) {
   const posZ = pupper.position.z;
   const posX = pupper.position.x;
@@ -819,37 +790,59 @@ function updateNavigation(delta) {
   const forwardDir = new THREE.Vector3(0, 0, 1).applyQuaternion(pupper.quaternion);
   const sensorFrontPos = pupper.position.clone().add(new THREE.Vector3(0, 0.25, 0)).add(forwardDir.clone().multiplyScalar(0.2));
   raycaster.set(sensorFrontPos, forwardDir);
-  const forwardHits = raycaster.intersectObjects([pole], false);
+  
+  const rayTargets = [...HAZARD_OBJECTS];
+  if (pole) rayTargets.push(pole);
+  const forwardHits = raycaster.intersectObjects(rayTargets, true);
   const forwardDist = forwardHits.length ? forwardHits[0].distance : 5.0;
 
-  const downOrigin = pupper.position.clone().add(forwardDir.clone().multiplyScalar(0.2)).add(new THREE.Vector3(0, 0.2, 0));
+  // Ground elevation Raycast for Stair Elevation Calculation
+  const downOrigin = pupper.position.clone().add(forwardDir.clone().multiplyScalar(0.35)).add(new THREE.Vector3(0, 0.6, 0));
   raycaster.set(downOrigin, new THREE.Vector3(0, -1, 0));
-  const groundHits = raycaster.intersectObjects(WALKABLE_SURFACES, false);
-  const downDist = groundHits.length ? groundHits[0].distance : 3.0;
-
-  const isApproachingCrosswalk = (posZ >= 40.0 && posZ < 43.5);
-  const isRedLightBlocking = isApproachingCrosswalk && (trafficLight.state === 'RED');
+  const groundHits = raycaster.intersectObjects(WALKABLE_SURFACES, true);
   
+  let currentSurfaceY = 0.0;
+  if (groundHits.length > 0) {
+    currentSurfaceY = groundHits[0].point.y;
+  }
+  
+  pupper.position.y += (currentSurfaceY + 0.05 - pupper.position.y) * Math.min(1.0, delta * 12.0);
+
+  // Staircase & Proximity Conditions
+  const isApproachingUpStairs = (posZ >= STAIR_START_Z - 1.2 && posZ < STAIR_START_Z - 0.1);
+  const isApproachingDownStairs = (posZ >= DOWN_STAIR_START_Z - 0.6 && posZ < DOWN_STAIR_START_Z + 0.2);
+  const isApproachingCrosswalk = (posZ >= 47.0 && posZ < 50.5);
+  const isRedLightBlocking = isApproachingCrosswalk && (trafficLight.state === 'RED');
+
   let isOverheadAhead = false;
-  if (activeTreeObstacle && Math.abs(posZ - activeTreeObstacle.position.z) < 1.8) {
+  if (activeSignObstacle && Math.abs(posZ - (pupper.position.z + 3.5)) < 1.8) {
     isOverheadAhead = true;
   }
 
   let nextState = 'IDLE';
-  if (isRedLightBlocking) { nextState = 'WAIT_RED_LIGHT'; }
-  else if (isOverheadAhead) { nextState = 'OBSTACLE_AVOID'; }
-  else if (manualControl) { nextState = 'NAVIGATING'; }
-  else if (activeTargetKey) {
+
+  if (isApproachingUpStairs) {
+    nextState = 'ALERT_STAIRS_UP';
+  } else if (isApproachingDownStairs) {
+    nextState = 'ALERT_STAIRS_DOWN';
+  } else if (activeBarrierObstacle && forwardDist < 1.5) {
+    nextState = 'ALERT_CONSTRUCTION';
+  } else if (isRedLightBlocking) {
+    nextState = 'WAIT_RED_LIGHT';
+  } else if (isOverheadAhead) {
+    nextState = 'OBSTACLE_AVOID';
+  } else if (manualControl) {
+    nextState = 'NAVIGATING';
+  } else if (activeTargetKey) {
     const targetStore = STORES[activeTargetKey];
     const distToTarget = Math.abs(posZ - targetStore.z);
 
     if (distToTarget < 0.6 && Math.abs(posX - targetStore.targetX) < 0.5) {
       nextState = 'ARRIVED';
-      // POPUP ONCE ONLY LOGIC: Trigger modal pop-up once per destination selection
       if (!arrivalAlertShown) {
-        arrivalAlertShown = true; // Set flag to prevent repeating popups
+        arrivalAlertShown = true;
         document.getElementById('arrivalTitle').textContent = `🎉 平安抵達 ${targetStore.name}！`;
-        document.getElementById('arrivalDesc').textContent = `Pupper V3 導盲犬已順利引導您到達 ${targetStore.name} 前門處。`;
+        document.getElementById('arrivalDesc').textContent = `GuidPaw 導盲犬已順利引導您到達 ${targetStore.name} 前門處。`;
         document.getElementById('arrivalCard').style.display = 'block';
         logBt(`抵達目的地：${targetStore.name}`);
       }
@@ -858,18 +851,39 @@ function updateNavigation(delta) {
     }
   }
 
+  // Trigger State Changes & GuidPaw Hazard Alerts
   if (nextState !== currentState) {
     currentState = nextState;
-    logBt('導航狀態 → ' + currentState);
+    stairPauseTimer = 1.8;
+
+    if (currentState === 'ALERT_STAIRS_UP') {
+      showToastAlert('🪜', '前方上階梯！GuidPaw 停步示警（請準備踏上第一階）');
+      logBt('【GuidPaw 警示】發現上行階梯！抬頭示警');
+    } else if (currentState === 'ALERT_STAIRS_DOWN') {
+      showToastAlert('⚠️', '前方下階梯！GuidPaw 停步示警（請注意腳下）');
+      logBt('【GuidPaw 警示】發現下行階梯！於邊緣停步低頭');
+    } else if (currentState === 'ALERT_CONSTRUCTION') {
+      showToastAlert('🚧', '發現道路施工圍籬！GuidPaw 帶領繞行');
+      logBt('【GuidPaw 警示】前方施工圍籬，啟動安全避障引導');
+    } else if (currentState === 'WAIT_RED_LIGHT') {
+      showToastAlert('🚦', '紅燈停等！GuidPaw 斑馬線前停步');
+      logBt('【GuidPaw 警示】過街紅燈，於路緣停步等候');
+    } else if (currentState === 'OBSTACLE_AVOID') {
+      showToastAlert('🌿', '發現低垂懸空障礙！GuidPaw 側向帶領避讓');
+    }
   }
 
   let moving = false;
+
+  if (stairPauseTimer > 0) {
+    stairPauseTimer -= delta;
+  }
 
   if (manualControl) {
     if (keys['a']) pupper.position.x -= 1.6 * delta;
     if (keys['d']) pupper.position.x += 1.6 * delta;
     if (keys['w']) { pupper.position.z += MOVE_SPEED * delta; moving = true; }
-  } else if (currentState === 'NAVIGATING' || currentState === 'OBSTACLE_AVOID') {
+  } else if ((currentState === 'NAVIGATING' || currentState === 'OBSTACLE_AVOID' || currentState === 'ALERT_CONSTRUCTION' || currentState === 'ALERT_STAIRS_UP' || currentState === 'ALERT_STAIRS_DOWN') && stairPauseTimer <= 0) {
     let desiredX = SIDEWALK_X;
     let desiredZ = posZ;
 
@@ -882,6 +896,7 @@ function updateNavigation(delta) {
     }
 
     if (isOverheadAhead) { desiredX = SIDEWALK_X - 0.9; }
+    if (currentState === 'ALERT_CONSTRUCTION') { desiredX = SIDEWALK_X + 0.8; }
 
     const deltaZ = desiredZ - posZ;
     const deltaX = desiredX - posX;
@@ -912,12 +927,21 @@ function updateNavigation(delta) {
     telemetry.lastPos.copy(pupper.position);
   }
 
-  // Dog Legs Walking Animation
+  // Dog Walking Gait Animation
   if (moving) { gaitTime += delta * 9; } else { gaitTime += (0 - gaitTime) * 0.1; }
   legs.forEach(leg => {
     leg.hip.rotation.x = moving ? Math.sin(gaitTime + leg.phase) * 0.5 : 0;
   });
   torsoGroup.position.y = moving ? Math.abs(Math.sin(gaitTime * 2)) * 0.025 : 0;
+
+  // GuidPaw Head Alert Pose
+  if (currentState === 'ALERT_STAIRS_UP') {
+    dogHead.rotation.x = -0.35;
+  } else if (currentState === 'ALERT_STAIRS_DOWN') {
+    dogHead.rotation.x = 0.45;
+  } else {
+    dogHead.rotation.x = 0;
+  }
 
   function setLine(line, from, to, color) {
     const pos = line.geometry.attributes.position;
@@ -927,20 +951,39 @@ function updateNavigation(delta) {
     line.material.color.set(color);
   }
   setLine(rayForwardLine, sensorFrontPos, sensorFrontPos.clone().add(forwardDir.clone().multiplyScalar(forwardDist)), forwardDist < 1.2 ? 0xe85252 : 0x34d0b6);
-  setLine(rayDownLine, downOrigin, downOrigin.clone().add(new THREE.Vector3(0, -downDist, 0)), 0x34d0b6);
+  setLine(rayDownLine, downOrigin, downOrigin.clone().add(new THREE.Vector3(0, -1.0, 0)), 0x34d0b6);
 
-  return { forwardDist, downDist, isRedLightBlocking, isOverheadAhead };
+  return { forwardDist, downDist: currentSurfaceY, isRedLightBlocking, isOverheadAhead };
 }
 
 function updateHUD(info) {
   const badge = document.getElementById('stateBadge');
   badge.textContent = currentState;
-  badge.style.borderColor = currentState === 'NAVIGATING' ? '#34d0b6' : (currentState === 'WAIT_RED_LIGHT' ? '#f5a623' : '#32445a');
-  badge.style.color = currentState === 'NAVIGATING' ? '#34d0b6' : (currentState === 'WAIT_RED_LIGHT' ? '#f5a623' : '#8fa0b4');
+  
+  const dogStateLabel = document.getElementById('valDogState');
+  if (currentState.includes('STAIRS_UP')) {
+    dogStateLabel.textContent = '🪜 上階梯停步示警';
+    dogStateLabel.style.color = '#9b8cf2';
+  } else if (currentState.includes('STAIRS_DOWN')) {
+    dogStateLabel.textContent = '⚠️ 下階梯緣停步示警';
+    dogStateLabel.style.color = '#f5a623';
+  } else if (currentState === 'ALERT_CONSTRUCTION') {
+    dogStateLabel.textContent = '🚧 施工圍籬避障';
+    dogStateLabel.style.color = '#e67e22';
+  } else if (currentState === 'WAIT_RED_LIGHT') {
+    dogStateLabel.textContent = '🚦 紅燈停等';
+    dogStateLabel.style.color = '#e74c3c';
+  } else {
+    dogStateLabel.textContent = '正常引導中';
+    dogStateLabel.style.color = '#34d0b6';
+  }
+
+  badge.style.borderColor = currentState === 'NAVIGATING' ? '#34d0b6' : '#f5a623';
+  badge.style.color = currentState === 'NAVIGATING' ? '#34d0b6' : '#f5a623';
 
   document.getElementById('valForward').textContent = info.forwardDist.toFixed(2) + ' m';
   document.getElementById('valDown').textContent = info.downDist.toFixed(2) + ' m';
-  document.getElementById('valUp').textContent = info.isOverheadAhead ? '發現懸空樹枝！' : '正常';
+  document.getElementById('valUp').textContent = info.isOverheadAhead ? '發現懸空障礙！' : '正常';
   document.getElementById('valLight').textContent = trafficLight.state === 'GREEN' ? '綠燈 (安全過街)' : '紅燈 (停等車流)';
 
   document.getElementById('mDist').textContent = telemetry.totalDistance.toFixed(1) + ' m';
@@ -957,7 +1000,22 @@ function updateHUD(info) {
   const vibeFill = document.getElementById('vibeBarFill');
   const pullLabel = document.getElementById('pullLabel');
 
-  if (currentState === 'OBSTACLE_AVOID') {
+  if (currentState === 'ALERT_STAIRS_UP') {
+    arrow.style.transform = 'rotate(-90deg)';
+    vibeFill.style.width = '75%';
+    vibeFill.style.background = '#9b8cf2';
+    pullLabel.textContent = '牽繩雙短脈衝（上階梯示警）';
+  } else if (currentState === 'ALERT_STAIRS_DOWN') {
+    arrow.style.transform = 'rotate(90deg)';
+    vibeFill.style.width = '90%';
+    vibeFill.style.background = '#f5a623';
+    pullLabel.textContent = '牽繩三長脈衝（下階梯邊緣示警）';
+  } else if (currentState === 'ALERT_CONSTRUCTION') {
+    arrow.style.transform = 'rotate(45deg)';
+    vibeFill.style.width = '80%';
+    vibeFill.style.background = '#e67e22';
+    pullLabel.textContent = '牽繩右側引導（繞過施工圍籬）';
+  } else if (currentState === 'OBSTACLE_AVOID') {
     arrow.style.transform = 'rotate(-35deg)';
     vibeFill.style.width = '85%';
     vibeFill.style.background = '#e8735d';
@@ -989,6 +1047,65 @@ function updateCamera(delta) {
   camera.lookAt(pupper.position.clone().add(new THREE.Vector3(0, 0.4, 1.8)));
 }
 
+// UI Event Listeners
+document.querySelectorAll('.store-btn').forEach(btn => {
+  btn.addEventListener('click', () => {
+    const targetKey = btn.getAttribute('data-target');
+    activeTargetKey = targetKey;
+    arrivalAlertShown = false;
+    document.getElementById('arrivalCard').style.display = 'none';
+    document.querySelectorAll('.store-btn').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+    logBt(`設定 GuidPaw 導航目標：${STORES[targetKey].name}`);
+  });
+});
+
+document.getElementById('btnStairs').addEventListener('click', () => {
+  pupper.position.set(SIDEWALK_X, 0.05, STAIR_START_Z - 3.0);
+  pupper.rotation.set(0, 0, 0);
+  logBt('快速移動至「景觀陸橋階梯」入口準備測試 GuidPaw 階梯警示');
+});
+
+document.getElementById('btnBarrier').addEventListener('click', () => {
+  toggleConstructionBarrier();
+});
+
+document.getElementById('btnBranch').addEventListener('click', () => {
+  toggleOverheadSign();
+});
+
+document.getElementById('btnManual').addEventListener('click', (e) => {
+  manualControl = !manualControl;
+  e.target.classList.toggle('active', manualControl);
+  logBt(manualControl ? '切換至 WASD 手動操控模式' : '切換至 GuidPaw AI 自動導航模式');
+});
+
+document.getElementById('btnRed').addEventListener('click', () => {
+  trafficLight.manualOverrideUntil = performance.now() + 8000;
+  trafficLight.state = trafficLight.state === 'RED' ? 'GREEN' : 'RED';
+  logBt(`手動切換斑馬線燈號為：${trafficLight.state}`);
+});
+
+document.getElementById('btnCamera').addEventListener('click', () => {
+  birdView = !birdView;
+  orbitControls.enabled = birdView;
+  if (birdView) {
+    camera.position.set(-3, 22, 35);
+    camera.lookAt(-3, 0, 35);
+  }
+  logBt(birdView ? '切換至鳥瞰視角 (可滑鼠旋轉)' : '切換至第一人稱跟隨視角');
+});
+
+document.getElementById('btnReset').addEventListener('click', () => {
+  pupper.position.set(SIDEWALK_X, 0.05, 0);
+  pupper.rotation.set(0, 0, 0);
+  activeTargetKey = null;
+  arrivalAlertShown = false;
+  document.getElementById('arrivalCard').style.display = 'none';
+  document.querySelectorAll('.store-btn').forEach(b => b.classList.remove('active'));
+  logBt('GuidPaw 導盲系統已重置至初始位置');
+});
+
 const clock = new THREE.Clock();
 let gaitTime = 0;
 
@@ -1007,7 +1124,7 @@ function animate() {
   const navInfo = updateNavigation(delta);
   updateCamera(delta);
   updateHUD(navInfo);
-  drawMinimap(); // Render top-left 2D map every frame
+  drawMinimap();
 
   renderer.render(scene, camera);
 }
@@ -1019,7 +1136,7 @@ window.addEventListener('resize', () => {
   renderer.setSize(window.innerWidth, window.innerHeight);
 });
 
-logBt('街道導航系統與左上角 2D 即時地圖已就緒！');
+logBt('GuidPaw 導盲犬 AI 模擬導航系統初始化完畢！');
 </script>
 </body>
 </html>
